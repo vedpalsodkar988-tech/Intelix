@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intelix - Home</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Intelix</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="/home" class="nav-item active">
+                    <span class="nav-icon">🏠</span>
+                    <span>Home</span>
+                </a>
+                <a href="/abilities" class="nav-item">
+                    <span class="nav-icon">⚡</span>
+                    <span>Abilities</span>
+                </a>
+                <a href="/projects" class="nav-item">
+                    <span class="nav-icon">📁</span>
+                    <span>Your Projects</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="/profile" class="nav-item">
+                    <span class="nav-icon">👤</span>
+                    <span>Profile</span>
+                </a>
+                <a href="/settings" class="nav-item">
+                    <span class="nav-icon">⚙️</span>
+                    <span>Settings</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="chat-container">
+                <header class="chat-header">
+                    <h1>An AI system built to execute</h1>
+                    <p>Welcome back, {{ username }}!</p>
+                </header>
+
+                <div class="task-input-container">
+                    <input type="text" 
+                           id="taskInput" 
+                           placeholder="Enter your task...">
+                    <button class="voice-btn" id="voiceBtn" title="Voice Input">
+                        🎤
+                    </button>
+                </div>
+                
+                <button class="run-task-btn" id="runTaskBtn">
+                    Run Task
+                </button>
+
+                <!-- Task Status Display -->
+                <div id="taskStatus" class="task-status" style="display: none;">
+                    <h3>Task Running...</h3>
+                    <div class="status-log" id="statusLog"></div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="footer">
+                <span>Intelix</span>
+                <span><a href="/privacy">Privacy</a></span>
+                <span><a href="/terms">Terms</a></span>
+                <span><a href="#">Support</a></span>
+            </footer>
+        </main>
+    </div>
+
+    <script>
+        // WebSocket connection for real-time updates
+        const socket = io();
+
+        socket.on('connect', function() {
+            console.log('Connected to server');
+        });
+
+        socket.on('task_started', function(data) {
+            document.getElementById('taskStatus').style.display = 'block';
+            addLog('Task started: ' + data.description);
+        });
+
+        socket.on('task_update', function(data) {
+            const msg = data.message;
+            if (!msg.includes('AI Brain chose') && 
+                !msg.includes('Running click') && 
+                !msg.includes('completed') &&
+                msg !== '✅ Task completed!') {
+                addLog(msg);
+            }
+        });
+
+        socket.on('task_completed', function(data) {
+            addLog('✅ Task completed!');
+        });
+
+        function addLog(message) {
+            const log = document.getElementById('statusLog');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.textContent = new Date().toLocaleTimeString() + ' - ' + message;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // Run task button
+        document.getElementById('runTaskBtn').addEventListener('click', async function() {
+            const taskInput = document.getElementById('taskInput');
+            const task = taskInput.value.trim();
+            
+            if (!task) {
+                alert('Please enter a task');
+                return;
+            }
+
+            try {
+                const response = await fetch('/run-task', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ task: task })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    taskInput.value = '';
+                    document.getElementById('taskStatus').style.display = 'block';
+                    addLog('Task submitted: ' + task);
+                    
+                    // Display the actual result if available
+                    if (data.result) {
+                        displayResult(data.result);
+                    }
+                } else {
+                    alert('Error: ' + (data.message || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to submit task');
+            }
+        });
+        
+        function displayResult(result) {
+            const log = document.getElementById('statusLog');
+            
+            // Handle INTERNSHIP SEARCH results (NEW!)
+            if (result.internships && result.internships.length > 0) {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'internship-results';
+                resultDiv.style.cssText = 'background: rgba(139, 92, 246, 0.1); border-left: 4px solid #8b5cf6; padding: 20px; margin: 15px 0; border-radius: 12px;';
+                
+                let html = '<div style="color: #8b5cf6; font-weight: bold; font-size: 18px; margin-bottom: 15px;">🎓 TOP INTERNSHIP MATCHES</div>';
+                
+                if (result.total_found) {
+                    html += `<div style="color: #8b92b0; font-size: 13px; margin-bottom: 15px;">Found ${result.total_found} internships. Showing TOP 3 best matches:</div>`;
+                }
+                
+                result.internships.forEach((internship, idx) => {
+                    html += `
+                        <div style="background: rgba(26, 31, 58, 0.8); border: 2px solid rgba(139, 92, 246, 0.3); border-radius: 10px; padding: 15px; margin-bottom: 12px;">
+                            <div style="color: #8b5cf6; font-weight: bold; font-size: 16px; margin-bottom: 8px;">${idx + 1}. ${internship.title}</div>
+                            <div style="color: #e2e8f0; margin-bottom: 6px;">
+                                <span style="color: #8b92b0;">Company:</span> <strong>${internship.company}</strong>
+                            </div>
+                            <div style="color: #e2e8f0; margin-bottom: 6px;">
+                                <span style="color: #8b92b0;">Location:</span> ${internship.location}
+                            </div>
+                            <div style="color: #e2e8f0; margin-bottom: 6px;">
+                                <span style="color: #8b92b0;">Duration:</span> ${internship.duration}
+                            </div>
+                            <div style="color: #10b981; font-weight: bold; margin-bottom: 8px;">
+                                <span style="color: #8b92b0;">Stipend:</span> ${internship.stipend}
+                            </div>
+                            <div style="color: #94a3b8; font-size: 13px; line-height: 1.6; margin-bottom: 10px;">
+                                ${internship.description}
+                            </div>
+                            <a href="${internship.link}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; padding: 8px 20px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600;">
+                                Apply Now →
+                            </a>
+                        </div>
+                    `;
+                });
+                
+                resultDiv.innerHTML = html;
+                log.appendChild(resultDiv);
+                log.scrollTop = log.scrollHeight;
+            }
+            // Handle JOB SEARCH results
+            else if (result.jobs && result.jobs.length > 0) {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'job-results';
+                resultDiv.style.cssText = 'background: rgba(34, 197, 94, 0.1); border-left: 4px solid #22c55e; padding: 20px; margin: 15px 0; border-radius: 12px;';
+                
+                let html = '<div style="color: #22c55e; font-weight: bold; font-size: 18px; margin-bottom: 15px;">💼 TOP JOB MATCHES</div>';
+                
+                if (result.total_found) {
+                    html += `<div style="color: #8b92b0; font-size: 13px; margin-bottom: 15px;">Found ${result.total_found} jobs. Showing TOP 3 best matches:</div>`;
+                }
+                
+                result.jobs.forEach((job, idx) => {
+                    html += `
+                        <div style="background: rgba(26, 31, 58, 0.8); border: 2px solid rgba(34, 197, 94, 0.3); border-radius: 10px; padding: 15px; margin-bottom: 12px;">
+                            <div style="color: #22c55e; font-weight: bold; font-size: 16px; margin-bottom: 8px;">${idx + 1}. ${job.title}</div>
+                            <div style="color: #e2e8f0; margin-bottom: 6px;">
+                                <span style="color: #8b92b0;">Company:</span> <strong>${job.company}</strong>
+                            </div>
+                            <div style="color: #e2e8f0; margin-bottom: 6px;">
+                                <span style="color: #8b92b0;">Location:</span> ${job.location}
+                            </div>
+                            <div style="color: #22c55e; font-weight: bold; margin-bottom: 8px;">
+                                <span style="color: #8b92b0;">Salary:</span> ${job.salary}
+                            </div>
+                            <div style="color: #94a3b8; font-size: 13px; line-height: 1.6; margin-bottom: 10px;">
+                                ${job.snippet}
+                            </div>
+                            <a href="${job.link}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; padding: 8px 20px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600;">
+                                Apply Now →
+                            </a>
+                        </div>
+                    `;
+                });
+                
+                // Show searches remaining
+                if (result.searches_remaining !== undefined) {
+                    html += `<div style="margin-top: 15px; padding: 10px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; text-align: center; color: #60a5fa; font-size: 13px;">
+                        📊 Searches remaining today: <strong>${result.searches_remaining}/3</strong> (FREE tier)
+                    </div>`;
+                }
+                
+                resultDiv.innerHTML = html;
+                log.appendChild(resultDiv);
+                log.scrollTop = log.scrollHeight;
+            }
+            // Handle text extraction results
+            else if (result.summary) {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'extraction-result';
+                resultDiv.style.cssText = 'background: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; padding: 15px; margin: 10px 0; border-radius: 8px;';
+                
+                let html = '<div style="color: #60a5fa; font-weight: bold; margin-bottom: 10px;">📄 EXTRACTED SUMMARY:</div>';
+                
+                if (result.topic && result.website) {
+                    html += `<div style="color: #8b92b0; font-size: 13px; margin-bottom: 10px;">Topic: <strong>${result.topic}</strong> from <strong>${result.website}</strong></div>`;
+                }
+                
+                html += `<div style="color: #e2e8f0; line-height: 1.8; white-space: pre-wrap;">${result.summary}</div>`;
+                
+                if (result.keywords && result.keywords.length > 0) {
+                    html += '<div style="margin-top: 12px; color: #8b92b0; font-size: 13px;">Keywords: ';
+                    result.keywords.forEach((kw, idx) => {
+                        html += `<span style="background: rgba(59, 130, 246, 0.2); padding: 4px 8px; border-radius: 4px; margin-right: 5px; display: inline-block;">${kw}</span>`;
+                    });
+                    html += '</div>';
+                }
+                
+                resultDiv.innerHTML = html;
+                log.appendChild(resultDiv);
+                log.scrollTop = log.scrollHeight;
+            }
+            // Handle errors
+            else if (result.error) {
+                addLog('❌ Error: ' + result.error);
+            }
+            // Handle other result types
+            else if (typeof result === 'string') {
+                addLog(result);
+            }
+            else if (result.message) {
+                addLog(result.message);
+            }
+        }
+
+        // Voice command
+        document.getElementById('voiceBtn').addEventListener('click', function() {
+            if ('webkitSpeechRecognition' in window) {
+                const recognition = new webkitSpeechRecognition();
+                recognition.lang = 'en-US';
+                recognition.start();
+
+                recognition.onresult = function(event) {
+                    const transcript = event.results[0][0].transcript;
+                    document.getElementById('taskInput').value = transcript;
+                };
+
+                recognition.onerror = function(event) {
+                    alert('Voice recognition error');
+                };
+            } else {
+                alert('Voice recognition not supported in this browser');
+            }
+        });
+
+        // Enter key to run task
+        document.getElementById('taskInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('runTaskBtn').click();
+            }
+        });
+    </script>
+</body>
+</html>

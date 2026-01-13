@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Intelix</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .settings-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 50px 100px;
+        }
+        .settings-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .settings-header h1 {
+            font-size: 42px;
+            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        .settings-section {
+            background: rgba(26, 31, 58, 0.8);
+            border: 2px solid rgba(59, 130, 246, 0.3);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 25px;
+        }
+        .section-title {
+            color: #3b82f6;
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(59, 130, 246, 0.3);
+        }
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+        }
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+        .setting-label {
+            color: #e2e8f0;
+            font-size: 15px;
+        }
+        .setting-description {
+            color: #8b92b0;
+            font-size: 13px;
+            margin-top: 5px;
+        }
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 26px;
+            background: #475569;
+            border-radius: 13px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .toggle-switch.active {
+            background: #3b82f6;
+        }
+        .toggle-slider {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+        .toggle-switch.active .toggle-slider {
+            transform: translateX(24px);
+        }
+        .danger-button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .danger-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4);
+        }
+        .info-box {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            color: #94a3b8;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Intelix</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="/home" class="nav-item">
+                    <span class="nav-icon">🏠</span>
+                    <span>Home</span>
+                </a>
+                <a href="/abilities" class="nav-item">
+                    <span class="nav-icon">⚡</span>
+                    <span>Abilities</span>
+                </a>
+                <a href="/projects" class="nav-item">
+                    <span class="nav-icon">📁</span>
+                    <span>Your Projects</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="/profile" class="nav-item">
+                    <span class="nav-icon">👤</span>
+                    <span>Profile</span>
+                </a>
+                <a href="/settings" class="nav-item active">
+                    <span class="nav-icon">⚙️</span>
+                    <span>Settings</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="settings-container">
+                <div class="settings-header">
+                    <h1>Settings</h1>
+                    <p style="color: #8b92b0;">Manage your account and preferences</p>
+                </div>
+
+                <!-- Account Settings -->
+                <div class="settings-section">
+                    <div class="section-title">👤 Account</div>
+                    
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">Username</div>
+                            <div class="setting-description">{{ username }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">Change Password</div>
+                            <div class="setting-description">Update your account password</div>
+                        </div>
+                        <button onclick="alert('Password change feature coming soon!')" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">Change</button>
+                    </div>
+                </div>
+
+                <!-- Preferences -->
+                <div class="settings-section">
+                    <div class="section-title">🔔 Notifications</div>
+                    
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">Email Notifications</div>
+                            <div class="setting-description">Receive updates about your tasks</div>
+                        </div>
+                        <div class="toggle-switch active" onclick="toggleSwitch(this)">
+                            <div class="toggle-slider"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">Job Search Alerts</div>
+                            <div class="setting-description">Get notified when new matching jobs are found</div>
+                        </div>
+                        <div class="toggle-switch active" onclick="toggleSwitch(this)">
+                            <div class="toggle-slider"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">Price Drop Alerts</div>
+                            <div class="setting-description">Get notified when prices drop on tracked items</div>
+                        </div>
+                        <div class="toggle-switch" onclick="toggleSwitch(this)">
+                            <div class="toggle-slider"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Subscription -->
+                <div class="settings-section">
+                    <div class="section-title">💎 Subscription</div>
+                    
+                    <div class="info-box">
+                        <strong>Current Plan: FREE</strong><br>
+                        • 3 job searches per day<br>
+                        • Basic abilities access<br>
+                        • Manual execution<br><br>
+                        <strong>Upgrade to Premium for:</strong><br>
+                        • Unlimited searches<br>
+                        • Auto-apply to jobs<br>
+                        • Priority support<br>
+                        • Advanced features
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 20px;">
+                        <button onclick="alert('Premium subscription coming soon!')" style="padding: 14px 32px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer;">
+                            Upgrade to Premium
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Danger Zone -->
+                <div class="settings-section" style="border-color: rgba(239, 68, 68, 0.3);">
+                    <div class="section-title" style="color: #ef4444;">⚠️ Danger Zone</div>
+                    
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">Delete Account</div>
+                            <div class="setting-description">Permanently delete your account and all data</div>
+                        </div>
+                        <button class="danger-button" onclick="confirmDelete()">Delete Account</button>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function toggleSwitch(element) {
+            element.classList.toggle('active');
+        }
+
+        function confirmDelete() {
+            if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+                if (confirm('This will permanently delete all your data. Are you absolutely sure?')) {
+                    // Add delete account logic here
+                    alert('Account deletion feature coming soon. Contact support@intelix.com to delete your account.');
+                }
+            }
+        }
+    </script>
+</body>
+</html>

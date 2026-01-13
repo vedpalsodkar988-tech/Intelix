@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Confirm Application — NexaAI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="bg-dark">
+  <header class="topbar">
+    <div class="brand">NexaAI</div>
+    <div class="right">
+      <a href="{{ url_for('home') }}" class="link">Home</a>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="card">
+      <h2>Confirm application</h2>
+      <h3>{{ job.title }} — <small>{{ job.company }}</small></h3>
+      <p class="muted">{{ job.location }}</p>
+
+      <h4>Your details</h4>
+      <p><strong>Name:</strong> {{ applicant.name }}</p>
+      <p><strong>Email:</strong> {{ applicant.email }}</p>
+      <p><strong>Phone:</strong> {{ applicant.phone }}</p>
+
+      <h4>Resume (preview)</h4>
+      <pre class="resume">{{ resume }}</pre>
+
+      <form method="post" action="{{ url_for('submit_application') }}">
+        <input type="hidden" name="job_id" value="{{ job.id }}">
+        <label>Do you want to submit?</label>
+        <div style="display:flex;gap:.75rem;">
+          <button name="confirm" value="yes" class="btn">Yes — Submit</button>
+          <button name="confirm" value="no" class="btn ghost">No — Cancel</button>
+        </div>
+      </form>
+    </div>
+  </main>
+</body>
+</html>

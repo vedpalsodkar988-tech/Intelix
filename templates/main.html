@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NexaAI Dashboard</title>
+    <style>
+        body {
+            background: #0d1117;
+            color: white;
+            font-family: Arial;
+            padding: 40px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        input {
+            width: 400px;
+            padding: 12px;
+            border-radius: 6px;
+            border: none;
+        }
+
+        button {
+            padding: 12px 20px;
+            background: #238636;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 15px;
+            margin-left: 10px;
+            border-radius: 6px;
+        }
+
+        .result-box {
+            margin-top: 40px;
+            padding: 20px;
+            background: #161b22;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Your Personal Web Automation Agent</h1>
+
+    <center>
+        <input id="taskInput" placeholder="Enter your task (Example: find jobs for software engineer)" />
+        <button onclick="runTask()">Run</button>
+    </center>
+
+    <div class="result-box" id="output"></div>
+
+    <script>
+        function runTask() {
+            const task = document.getElementById("taskInput").value;
+
+            fetch("/run_task", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ task })
+            })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById("output").innerHTML =
+                    "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
+            });
+        }
+    </script>
+
+</body>
+</html>

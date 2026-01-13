@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Submission Result — NexaAI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="bg-dark">
+  <header class="topbar">
+    <div class="brand">NexaAI</div>
+    <div class="right">
+      <a href="{{ url_for('home') }}" class="link">Home</a>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="card">
+      {% if status == "success" %}
+        <h2>✅ Application Submitted</h2>
+        <p>{{ message }}</p>
+      {% elif status == "cancelled" %}
+        <h2>🟡 Submission Cancelled</h2>
+        <p>{{ message }}</p>
+      {% else %}
+        <h2>❌ Error</h2>
+        <p>{{ message }}</p>
+      {% endif %}
+      <a class="btn" href="{{ url_for('home') }}">Back to Home</a>
+    </div>
+  </main>
+</body>
+</html>

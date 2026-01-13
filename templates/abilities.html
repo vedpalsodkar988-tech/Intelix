@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intelix - Abilities</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/abilities.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Intelix</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="/home" class="nav-item">
+                    <span class="nav-icon">🏠</span>
+                    <span>Home</span>
+                </a>
+                <a href="/abilities" class="nav-item active">
+                    <span class="nav-icon">⚡</span>
+                    <span>Abilities</span>
+                </a>
+                <a href="/projects" class="nav-item">
+                    <span class="nav-icon">📁</span>
+                    <span>Your Projects</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="/profile" class="nav-item">
+                    <span class="nav-icon">👤</span>
+                    <span>Profile</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">⚙️</span>
+                    <span>Settings</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="abilities-header">
+                <h1>Intelix Abilities</h1>
+                <p>Explore the powerful capabilities of your AI assistant</p>
+            </header>
+
+            <div class="abilities-grid">
+                {% for ability in abilities %}
+                <div class="ability-card">
+                    <div class="card-header">
+                        <div class="ability-number">{{ ability.id }}</div>
+                        {% if ability.status == 'active' %}
+                        <div class="ability-badge badge-active">Active</div>
+                        {% else %}
+                        <div class="ability-badge badge-coming-soon">Coming Soon</div>
+                        {% endif %}
+                    </div>
+                    
+                    <h2 class="ability-name">{{ ability.name }}</h2>
+                    <p class="ability-description">{{ ability.description }}</p>
+                    
+                    <div class="ability-functions">
+                        <h3>Top Functions:</h3>
+                        <ul>
+                            {% for func in ability.functions %}
+                            <li>{{ func }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    
+                    <div class="ability-rating">
+                        <span class="rating-label">Performance:</span>
+                        <div class="stars">
+                            {% for i in range(ability.rating) %}
+                            <span class="star filled">⭐</span>
+                            {% endfor %}
+                            {% for i in range(5 - ability.rating) %}
+                            <span class="star">⭐</span>
+                            {% endfor %}
+                        </div>
+                        <span class="rating-score">{{ ability.rating }}/5</span>
+                    </div>
+                    
+                    <button class="use-ability-btn" onclick="useAbility('{{ ability.name }}')">
+                        Use This Ability
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function useAbility(abilityName) {
+            // Redirect to home with ability pre-filled
+            const task = `Use ${abilityName} to `;
+            window.location.href = `/home?task=${encodeURIComponent(task)}`;
+        }
+
+        // Add some animation on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.ability-card').forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition = 'all 0.5s ease';
+            observer.observe(card);
+        });
+    </script>
+</body>
+</html>

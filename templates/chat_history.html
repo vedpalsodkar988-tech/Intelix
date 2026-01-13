@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat History - AI Agent</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .history-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 50px 100px;
+        }
+        .history-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .history-header h1 {
+            font-size: 42px;
+            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        .task-item {
+            background: rgba(26, 31, 58, 0.8);
+            border: 2px solid rgba(59, 130, 246, 0.3);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+        .task-item:hover {
+            border-color: #3b82f6;
+            transform: translateX(5px);
+        }
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .task-description {
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .task-status {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .status-completed {
+            background: rgba(34, 197, 94, 0.2);
+            border: 1px solid #22c55e;
+            color: #22c55e;
+        }
+        .status-running {
+            background: rgba(251, 146, 60, 0.2);
+            border: 1px solid #fb923c;
+            color: #fb923c;
+        }
+        .status-failed {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid #ef4444;
+            color: #ef4444;
+        }
+        .task-meta {
+            display: flex;
+            gap: 20px;
+            color: #8b92b0;
+            font-size: 13px;
+            margin-top: 10px;
+        }
+        .task-result {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(10, 14, 39, 0.5);
+            border-radius: 8px;
+            color: #a5b4cb;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: #8b92b0;
+        }
+        .empty-state h2 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Intelix</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="/home" class="nav-item">
+                    <span class="nav-icon">🏠</span>
+                    Home
+                </a>
+                <a href="/abilities" class="nav-item">
+                    <span class="nav-icon">⚡</span>
+                    Abilities
+                </a>
+                <a href="/projects" class="nav-item active">
+                    <span class="nav-icon">📁</span>
+                    Your Projects
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="/profile" class="nav-item">
+                    <span class="nav-icon">👤</span>
+                    Profile
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">⚙️</span>
+                    Settings
+                </a>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="history-container">
+                <div class="history-header">
+                    <h1>Your Projects</h1>
+                    <p style="color: #8b92b0;">View all your completed and ongoing tasks</p>
+                </div>
+
+                {% if tasks %}
+                    {% for task in tasks %}
+                    <div class="task-item">
+                        <div class="task-header">
+                            <div class="task-description">{{ task[2] }}</div>
+                            <div class="task-status status-{{ task[3] }}">{{ task[3] }}</div>
+                        </div>
+                        
+                        <div class="task-meta">
+                            <span>🕐 {{ task[4] }}</span>
+                            {% if task[5] %}
+                            <span>✓ Completed: {{ task[5] }}</span>
+                            {% endif %}
+                        </div>
+
+                        {% if task[4] %}
+                        <div class="task-result">
+                            {{ task[4] if task[4] else 'No result available' }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <h2>No tasks yet</h2>
+                        <p>Start by running your first task from the home page!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </main>
+    </div>
+</body>
+</html>

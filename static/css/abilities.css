@@ -1,0 +1,274 @@
+.abilities-header {
+    padding: 60px 50px 40px;
+    text-align: center;
+    position: relative;
+    z-index: 1;
+}
+
+.abilities-header h1 {
+    font-size: 48px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 15px;
+}
+
+.abilities-header p {
+    color: #8b92b0;
+    font-size: 18px;
+}
+
+/* FIXED: 3 cards per row */
+.abilities-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 30px;
+    padding: 40px 50px 100px;
+    position: relative;
+    z-index: 1;
+}
+
+/* Ability Card - FIFA-style */
+.ability-card {
+    background: linear-gradient(135deg, rgba(26, 31, 58, 0.95) 0%, rgba(15, 21, 53, 0.95) 100%);
+    border: 2px solid rgba(59, 130, 246, 0.3);
+    border-radius: 20px;
+    padding: 25px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.4s ease;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.ability-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+.ability-card:hover {
+    transform: translateY(-10px);
+    border-color: #3b82f6;
+    box-shadow: 0 20px 50px rgba(59, 130, 246, 0.4);
+}
+
+.ability-card:hover::before {
+    opacity: 1;
+}
+
+/* Card Header */
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.ability-number {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: 700;
+    color: white;
+    box-shadow: 0 5px 15px rgba(59, 130, 246, 0.4);
+}
+
+.ability-badge {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-active {
+    background: rgba(34, 197, 94, 0.2);
+    border: 1px solid #22c55e;
+    color: #22c55e;
+}
+
+.badge-coming-soon {
+    background: rgba(251, 146, 60, 0.2);
+    border: 1px solid #fb923c;
+    color: #fb923c;
+}
+
+/* Card Content */
+.ability-name {
+    font-size: 28px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, #ffffff 0%, #3b82f6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.ability-description {
+    color: #8b92b0;
+    font-size: 14px;
+    margin-bottom: 20px;
+    line-height: 1.6;
+}
+
+/* Functions List */
+.ability-functions {
+    margin-bottom: 20px;
+}
+
+.ability-functions h3 {
+    color: #3b82f6;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.ability-functions ul {
+    list-style: none;
+}
+
+.ability-functions li {
+    padding: 8px 0;
+    padding-left: 20px;
+    color: #a5b4cb;
+    font-size: 14px;
+    position: relative;
+}
+
+.ability-functions li::before {
+    content: '▸';
+    position: absolute;
+    left: 0;
+    color: #3b82f6;
+    font-weight: bold;
+}
+
+/* Rating */
+.ability-rating {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px 0;
+    border-top: 1px solid rgba(59, 130, 246, 0.2);
+    border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+    margin-bottom: 20px;
+}
+
+.rating-label {
+    color: #8b92b0;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.stars {
+    display: flex;
+    gap: 2px;
+}
+
+.star {
+    font-size: 18px;
+    filter: grayscale(100%);
+    opacity: 0.3;
+}
+
+.star.filled {
+    filter: grayscale(0%);
+    opacity: 1;
+    animation: starGlow 2s ease-in-out infinite;
+}
+
+@keyframes starGlow {
+    0%, 100% { 
+        transform: scale(1);
+        filter: drop-shadow(0 0 2px gold);
+    }
+    50% { 
+        transform: scale(1.1);
+        filter: drop-shadow(0 0 5px gold);
+    }
+}
+
+.rating-score {
+    margin-left: auto;
+    color: #3b82f6;
+    font-weight: 700;
+    font-size: 16px;
+}
+
+/* Use Button */
+.use-ability-btn {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.2) 100%);
+    border: 2px solid #3b82f6;
+    border-radius: 12px;
+    color: #3b82f6;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.use-ability-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.3), transparent);
+    transition: left 0.5s ease;
+}
+
+.use-ability-btn:hover {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    transform: scale(1.02);
+    box-shadow: 0 10px 25px rgba(59, 130, 246, 0.4);
+}
+
+.use-ability-btn:hover::before {
+    left: 100%;
+}
+
+.use-ability-btn:active {
+    transform: scale(0.98);
+}
+
+/* Responsive - adjust for smaller screens */
+@media (max-width: 1400px) {
+    .abilities-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 900px) {
+    .abilities-grid {
+        grid-template-columns: 1fr;
+        padding: 30px 20px 80px;
+    }
+    
+    .abilities-header h1 {
+        font-size: 36px;
+    }
+    
+    .ability-card {
+        padding: 20px;
+    }
+}
