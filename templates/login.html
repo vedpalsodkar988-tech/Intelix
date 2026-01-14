@@ -3,67 +3,167 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - AI Agent</title>
+    <title>Login - Intelix</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+    <style>
+        /* Alert styling */
+        .alert {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 20px 30px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            z-index: 9999;
+            animation: slideIn 0.3s ease;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            min-width: 300px;
+        }
+        
+        .alert-success {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            color: white;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        
+        .alert-error {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .alert-icon {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+
+        .debug-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            font-size: 12px;
+            color: #94a3b8;
+        }
+    </style>
 </head>
 <body>
     <div class="auth-container">
-        <div class="auth-box">
+        <div class="auth-card">
             <div class="auth-header">
                 <h1>Welcome Back</h1>
-                <p>Login to access your AI Agent</p>
+                <p>Login to access your AI agents</p>
             </div>
 
             <form id="loginForm" class="auth-form">
                 <div class="form-group">
                     <label for="username">Username</label>
-                    <input type="text" id="username" name="username" required>
+                    <input type="text" id="username" name="username" required 
+                           placeholder="Enter your username" autocomplete="username">
                 </div>
 
                 <div class="form-group">
                     <label for="password">Password</label>
-                    <input type="password" id="password" name="password" required>
+                    <input type="password" id="password" name="password" required 
+                           placeholder="Enter your password" autocomplete="current-password">
                 </div>
 
                 <button type="submit" class="auth-btn">Login</button>
             </form>
 
             <div class="auth-footer">
-                <p>Don't have an account? <a href="/signup">Sign up</a></p>
+                <p>Don't have an account? <a href="/signup">Sign Up</a></p>
             </div>
 
-            <div id="errorMessage" class="error-message" style="display: none;"></div>
+            <!-- Debug info (remove this later in production) -->
+            <div class="debug-info" id="debugInfo" style="display: none;">
+                <strong>Debug Info:</strong><br>
+                Username entered: <span id="debugUsername"></span><br>
+                Password length: <span id="debugPasswordLength"></span><br>
+                Response: <span id="debugResponse"></span>
+            </div>
         </div>
     </div>
 
     <script>
+        function showAlert(message, type) {
+            // Remove any existing alerts
+            const existingAlert = document.querySelector('.alert');
+            if (existingAlert) {
+                existingAlert.remove();
+            }
+
+            // Create new alert
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.innerHTML = `
+                <span class="alert-icon">${type === 'success' ? '✅' : '❌'}</span>
+                <span>${message}</span>
+            `;
+            document.body.appendChild(alert);
+
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                alert.style.animation = 'slideIn 0.3s ease reverse';
+                setTimeout(() => alert.remove(), 300);
+            }, 5000);
+        }
+
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
-            const username = document.getElementById('username').value;
+
+            const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
-            const errorMessage = document.getElementById('errorMessage');
+
+            // Show debug info (for testing)
+            document.getElementById('debugInfo').style.display = 'block';
+            document.getElementById('debugUsername').textContent = username;
+            document.getElementById('debugPasswordLength').textContent = password.length + ' characters';
 
             try {
+                console.log('Attempting login with:', { username, passwordLength: password.length });
+
                 const response = await fetch('/login', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
                 });
 
                 const data = await response.json();
+                
+                // Show debug response
+                document.getElementById('debugResponse').textContent = JSON.stringify(data);
+                console.log('Login response:', data);
 
                 if (data.success) {
-                    window.location.href = '/home';
+                    showAlert('✅ Login successful! Redirecting...', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/home';
+                    }, 1000);
                 } else {
-                    errorMessage.textContent = data.message;
-                    errorMessage.style.display = 'block';
+                    showAlert('❌ ' + (data.message || 'Invalid username or password'), 'error');
                 }
             } catch (error) {
-                errorMessage.textContent = 'Login failed. Please try again.';
-                errorMessage.style.display = 'block';
+                console.error('Login error:', error);
+                showAlert('❌ Network error. Please try again.', 'error');
+                document.getElementById('debugResponse').textContent = error.message;
             }
         });
     </script>
