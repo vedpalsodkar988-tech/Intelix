@@ -3,12 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Up - AgentOS</title>
+    <title>Sign Up - Intelix</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+    <style>
+        /* Alert styling */
+        .alert {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 20px 30px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            z-index: 9999;
+            animation: slideIn 0.3s ease;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            min-width: 300px;
+        }
+        
+        .alert-success {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            color: white;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        
+        .alert-error {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .alert-icon {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+    </style>
 </head>
 <body>
     <div class="auth-container">
-        <div class="auth-box">
+        <div class="auth-card">
             <div class="auth-header">
                 <h1>Create Account</h1>
                 <p>Join the AgentOS platform</p>
@@ -17,22 +61,26 @@
             <form id="signupForm" class="auth-form">
                 <div class="form-group">
                     <label for="username">Username</label>
-                    <input type="text" id="username" name="username" required>
+                    <input type="text" id="username" name="username" required 
+                           placeholder="Choose a username" autocomplete="off">
                 </div>
 
                 <div class="form-group">
                     <label for="email">Email</label>
-                    <input type="email" id="email" name="email" required>
+                    <input type="email" id="email" name="email" required 
+                           placeholder="your.email@example.com" autocomplete="off">
                 </div>
 
                 <div class="form-group">
                     <label for="password">Password</label>
-                    <input type="password" id="password" name="password" required minlength="6">
+                    <input type="password" id="password" name="password" required 
+                           placeholder="Create a strong password" autocomplete="new-password">
                 </div>
 
                 <div class="form-group">
                     <label for="confirmPassword">Confirm Password</label>
-                    <input type="password" id="confirmPassword" name="confirmPassword" required>
+                    <input type="password" id="confirmPassword" name="confirmPassword" required 
+                           placeholder="Re-enter your password" autocomplete="new-password">
                 </div>
 
                 <button type="submit" class="auth-btn">Create Account</button>
@@ -41,35 +89,49 @@
             <div class="auth-footer">
                 <p>Already have an account? <a href="/login">Login</a></p>
             </div>
-
-            <div id="errorMessage" class="error-message" style="display: none;"></div>
-            <div id="successMessage" class="success-message" style="display: none;"></div>
         </div>
     </div>
 
     <script>
+        function showAlert(message, type) {
+            // Remove any existing alerts
+            const existingAlert = document.querySelector('.alert');
+            if (existingAlert) {
+                existingAlert.remove();
+            }
+
+            // Create new alert
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.innerHTML = `
+                <span class="alert-icon">${type === 'success' ? '✅' : '❌'}</span>
+                <span>${message}</span>
+            `;
+            document.body.appendChild(alert);
+
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                alert.style.animation = 'slideIn 0.3s ease reverse';
+                setTimeout(() => alert.remove(), 300);
+            }, 5000);
+        }
+
         document.getElementById('signupForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
-            const username = document.getElementById('username').value;
-            const email = document.getElementById('email').value;
+
+            const username = document.getElementById('username').value.trim();
+            const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
-            const errorMessage = document.getElementById('errorMessage');
-            const successMessage = document.getElementById('successMessage');
 
-            errorMessage.style.display = 'none';
-            successMessage.style.display = 'none';
-
+            // Validation
             if (password !== confirmPassword) {
-                errorMessage.textContent = 'Passwords do not match';
-                errorMessage.style.display = 'block';
+                showAlert('Passwords do not match!', 'error');
                 return;
             }
 
             if (password.length < 6) {
-                errorMessage.textContent = 'Password must be at least 6 characters';
-                errorMessage.style.display = 'block';
+                showAlert('Password must be at least 6 characters long!', 'error');
                 return;
             }
 
@@ -79,24 +141,31 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ username, email, password })
+                    body: JSON.stringify({
+                        username: username,
+                        email: email,
+                        password: password
+                    })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
-                    successMessage.textContent = 'Account created successfully! Redirecting to login...';
-                    successMessage.style.display = 'block';
+                    showAlert('✨ Account created successfully! Redirecting to login...', 'success');
+                    
+                    // Clear form
+                    document.getElementById('signupForm').reset();
+                    
+                    // Redirect after 2 seconds
                     setTimeout(() => {
                         window.location.href = '/login';
-                    }, 1500);
+                    }, 2000);
                 } else {
-                    errorMessage.textContent = data.message;
-                    errorMessage.style.display = 'block';
+                    showAlert(data.message || 'Signup failed. Please try again.', 'error');
                 }
             } catch (error) {
-                errorMessage.textContent = 'Signup failed. Please try again.';
-                errorMessage.style.display = 'block';
+                console.error('Error:', error);
+                showAlert('Network error. Please check your connection.', 'error');
             }
         });
     </script>
