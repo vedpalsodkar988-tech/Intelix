@@ -28,7 +28,7 @@ RUN apt-get update && apt-get install -y \
     xdg-utils \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Google Chrome using new method (without apt-key)
+# Install Google Chrome
 RUN wget -q -O /tmp/google-chrome-stable_current_amd64.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
     && apt-get update \
     && apt-get install -y /tmp/google-chrome-stable_current_amd64.deb \
@@ -41,9 +41,8 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Playwright browsers
+# Install Playwright chromium only (skip install-deps since we did it manually)
 RUN playwright install chromium
-RUN playwright install-deps
 
 # Copy application code
 COPY . .
