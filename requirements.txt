@@ -8,3 +8,10 @@ gunicorn==21.2.0
 pillow==10.2.0
 requests==2.31.0
 google-generativeai
+playwright==1.40.0
+flask-socketio==5.3.5
+python-socketio==5.10.0
+eventlet==0.33.3
+beautifulsoup4==4.12.2
+lxml==4.9.3
+
