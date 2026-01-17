@@ -41,7 +41,7 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Playwright chromium only (skip install-deps since we did it manually)
+# Install Playwright chromium
 RUN playwright install chromium
 
 # Copy application code
@@ -54,5 +54,5 @@ EXPOSE 5000
 ENV PYTHONUNBUFFERED=1
 ENV PORT=5000
 
-# Start command
-CMD gunicorn --bind 0.0.0.0:$PORT --workers 1 --worker-class eventlet --timeout 120 app:app
+# Start command using gevent instead of eventlet
+CMD gunicorn --bind 0.0.0.0:$PORT --workers 1 --worker-class gevent --timeout 120 app:app
