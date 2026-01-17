@@ -1,8 +1,10 @@
+# Use Python slim image as base
 FROM python:3.11-slim
 
+# Set working directory
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies for headless Chrome
 RUN apt-get update && apt-get install -y \
     wget \
     gnupg \
@@ -19,40 +21,38 @@ RUN apt-get update && apt-get install -y \
     libgtk-3-0 \
     libnspr4 \
     libnss3 \
+    libwayland-client0 \
     libxcomposite1 \
     libxdamage1 \
     libxfixes3 \
+    libxkbcommon0 \
     libxrandr2 \
-    libxss1 \
-    libxtst6 \
     xdg-utils \
+    libu2f-udev \
+    libvulkan1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Google Chrome
-RUN wget -q -O /tmp/google-chrome-stable_current_amd64.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
-    && apt-get update \
-    && apt-get install -y /tmp/google-chrome-stable_current_amd64.deb \
-    && rm /tmp/google-chrome-stable_current_amd64.deb \
+# Install Chromium
+RUN apt-get update && apt-get install -y chromium chromium-driver \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements
+# Copy requirements first for better caching
 COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Playwright chromium
-RUN playwright install chromium
-
 # Copy application code
 COPY . .
 
-# Expose port
-EXPOSE 5000
-
-# Environment variables
+# Set environment variables for headless Chrome
+ENV CHROME_BIN=/usr/bin/chromium
+ENV CHROMEDRIVER_PATH=/usr/bin/chromedriver
+ENV DISPLAY=:99
 ENV PYTHONUNBUFFERED=1
-ENV PORT=5000
 
-# Start command using gevent instead of eventlet
-CMD gunicorn --bind 0.0.0.0:$PORT --workers 1 --worker-class gevent --timeout 120 app:app
+# Expose port
+EXPOSE 8000
+
+# Run the application
+CMD ["gunicorn", "--workers", "1", "--bind", "0.0.0.0:8000", "--worker-class", "sync", "--timeout", "120", "app:app"]
