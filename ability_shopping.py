@@ -233,7 +233,7 @@ def shopping_assistant_task(query, user_profile=None):
     print(f"Cleaned query: {product_query}")
     
     with sync_playwright() as p:
-        # Use system Chromium for Render
+        # Use system Chromium with anti-detection
         browser = p.chromium.launch(
             headless=True,
             executable_path='/usr/bin/chromium',
@@ -241,10 +241,26 @@ def shopping_assistant_task(query, user_profile=None):
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
-                '--disable-gpu'
+                '--disable-gpu',
+                '--disable-blink-features=AutomationControlled'
             ]
         )
-        context = browser.new_context(viewport={'width': 1920, 'height': 1080})
+        
+        # Create context with realistic settings
+        context = browser.new_context(
+            viewport={'width': 1920, 'height': 1080},
+            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            locale='en-IN',
+            timezone_id='Asia/Kolkata'
+        )
+        
+        # Add stealth scripts
+        context.add_init_script("""
+            Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+            Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]});
+            Object.defineProperty(navigator, 'languages', {get: () => ['en-US', 'en']});
+        """)
+        
         page = context.new_page()
         
         try:
@@ -297,4 +313,3 @@ def shopping_assistant_task(query, user_profile=None):
             traceback.print_exc()
             browser.close()
             return {"status": "error", "error": str(e)}
-
