@@ -43,19 +43,19 @@ def search_amazon(page, query):
     print("🔍 Searching Amazon...")
     
     try:
-        page.goto("https://www.amazon.in", wait_until="domcontentloaded", timeout=10000)
-        page.wait_for_timeout(2000)
+        page.goto("https://www.amazon.in", wait_until="domcontentloaded", timeout=30000)
+        page.wait_for_timeout(3000)
         
         # Search
         search_box = page.locator("#twotabsearchtextbox")
-        search_box.fill(query, timeout=5000)
+        search_box.fill(query, timeout=10000)
         search_box.press("Enter")
-        page.wait_for_timeout(3000)
+        page.wait_for_timeout(5000)
         
         print(f"✓ Amazon search completed for: {query}")
         
         products = []
-        page.wait_for_selector("[data-component-type='s-search-result']", timeout=10000)
+        page.wait_for_selector("[data-component-type='s-search-result']", timeout=30000)
         items = page.locator("[data-component-type='s-search-result']").all()[:5]
         print(f"Found {len(items)} items on Amazon")
         
@@ -122,29 +122,29 @@ def search_flipkart(page, query):
     print("🔍 Searching Flipkart...")
     
     try:
-        page.goto("https://www.flipkart.com", wait_until="domcontentloaded", timeout=10000)
-        page.wait_for_timeout(2000)
+        page.goto("https://www.flipkart.com", wait_until="domcontentloaded", timeout=30000)
+        page.wait_for_timeout(3000)
         
         # Close login popup if appears
         try:
-            page.locator("button._2KpZ6l._2doB4z").click(timeout=2000)
+            page.locator("button._2KpZ6l._2doB4z").click(timeout=3000)
         except:
             pass
         
         search_box = page.locator("input[name='q']")
-        search_box.fill(query, timeout=5000)
+        search_box.fill(query, timeout=10000)
         search_box.press("Enter")
-        page.wait_for_timeout(3000)
+        page.wait_for_timeout(5000)
         
         print(f"✓ Flipkart search completed for: {query}")
         
         products = []
         
         try:
-            page.wait_for_selector("div[data-id]", timeout=10000)
+            page.wait_for_selector("div[data-id]", timeout=30000)
         except:
             try:
-                page.wait_for_selector("div._75nlfW", timeout=5000)
+                page.wait_for_selector("div._75nlfW", timeout=10000)
             except:
                 print("⚠️ Could not find Flipkart results container")
                 return []
@@ -297,3 +297,4 @@ def shopping_assistant_task(query, user_profile=None):
             traceback.print_exc()
             browser.close()
             return {"status": "error", "error": str(e)}
+
