@@ -233,10 +233,16 @@ def shopping_assistant_task(query, user_profile=None):
     print(f"Cleaned query: {product_query}")
     
     with sync_playwright() as p:
-        # HEADLESS MODE FOR RENDER
+        # Use system Chromium for Render
         browser = p.chromium.launch(
             headless=True,
-            args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+            executable_path='/usr/bin/chromium',
+            args=[
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu'
+            ]
         )
         context = browser.new_context(viewport={'width': 1920, 'height': 1080})
         page = context.new_page()
