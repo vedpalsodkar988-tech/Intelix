@@ -36,6 +36,16 @@ RUN apt-get update && apt-get install -y \
 RUN apt-get update && apt-get install -y chromium chromium-driver \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Chromium dependencies
+RUN apt-get update && apt-get install -y \
+    chromium \
+    chromium-driver \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set Chromium path for Playwright
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+
 # Copy requirements first for better caching
 COPY requirements.txt .
 
@@ -55,4 +65,4 @@ ENV PYTHONUNBUFFERED=1
 EXPOSE 8000
 
 # Run the application
-CMD ["gunicorn", "--workers", "1", "--bind", "0.0.0.0:8000", "--worker-class", "sync", "--timeout", "120", "app:app"]
+CMD ["gunicorn", "--workers", "1", "--bind", "0.0.0.0:8000", "--worker-class", "sync", "--timeout", "300", "--log-level", "debug", "app:app"]
