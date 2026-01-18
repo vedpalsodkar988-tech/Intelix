@@ -1,10 +1,12 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from flask_socketio import SocketIO, emit
 from werkzeug.security import generate_password_hash, check_password_hash
-import sqlite3
+import psycopg2
+from psycopg2.extras import RealDictCursor
 import json
 from datetime import datetime
 import os
+from urllib.parse import urlparse
 
 # Import your abilities
 from ability2_click_type import click_type_task
@@ -24,14 +26,20 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-this-in-production')
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
+# PostgreSQL connection
+def get_db_connection():
+    database_url = os.environ.get('DATABASE_URL')
+    conn = psycopg2.connect(database_url, cursor_factory=RealDictCursor)
+    return conn
+
 # Database setup
 def init_db():
-    conn = sqlite3.connect('agent_system.db')
+    conn = get_db_connection()
     c = conn.cursor()
     
     # Users table
     c.execute('''CREATE TABLE IF NOT EXISTS users
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                 (id SERIAL PRIMARY KEY,
                   username TEXT UNIQUE NOT NULL,
                   email TEXT UNIQUE NOT NULL,
                   password TEXT NOT NULL,
@@ -39,7 +47,7 @@ def init_db():
     
     # Tasks table
     c.execute('''CREATE TABLE IF NOT EXISTS tasks
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                 (id SERIAL PRIMARY KEY,
                   user_id INTEGER,
                   task_description TEXT NOT NULL,
                   status TEXT DEFAULT 'pending',
@@ -50,7 +58,7 @@ def init_db():
     
     # Profile data table
     c.execute('''CREATE TABLE IF NOT EXISTS profiles
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                 (id SERIAL PRIMARY KEY,
                   user_id INTEGER UNIQUE,
                   full_name TEXT,
                   email TEXT,
@@ -150,15 +158,15 @@ def login():
         username = data.get('username')
         password = data.get('password')
         
-        conn = sqlite3.connect('agent_system.db')
+        conn = get_db_connection()
         c = conn.cursor()
-        c.execute('SELECT * FROM users WHERE username = ?', (username,))
+        c.execute('SELECT * FROM users WHERE username = %s', (username,))
         user = c.fetchone()
         conn.close()
         
-        if user and check_password_hash(user[3], password):
-            session['user_id'] = user[0]
-            session['username'] = user[1]
+        if user and check_password_hash(user['password'], password):
+            session['user_id'] = user['id']
+            session['username'] = user['username']
             return jsonify({'success': True, 'message': 'Login successful'})
         else:
             return jsonify({'success': False, 'message': 'Invalid credentials'})
@@ -176,14 +184,14 @@ def signup():
         hashed_password = generate_password_hash(password)
         
         try:
-            conn = sqlite3.connect('agent_system.db')
+            conn = get_db_connection()
             c = conn.cursor()
-            c.execute('INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
+            c.execute('INSERT INTO users (username, email, password) VALUES (%s, %s, %s)',
                      (username, email, hashed_password))
             conn.commit()
             conn.close()
             return jsonify({'success': True, 'message': 'Account created successfully'})
-        except sqlite3.IntegrityError:
+        except psycopg2.IntegrityError:
             return jsonify({'success': False, 'message': 'Username or email already exists'})
     
     return render_template('signup.html')
@@ -205,9 +213,9 @@ def projects():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     
-    conn = sqlite3.connect('agent_system.db')
+    conn = get_db_connection()
     c = conn.cursor()
-    c.execute('SELECT * FROM tasks WHERE user_id = ? ORDER BY created_at DESC', 
+    c.execute('SELECT * FROM tasks WHERE user_id = %s ORDER BY created_at DESC', 
               (session['user_id'],))
     tasks = c.fetchall()
     conn.close()
@@ -221,13 +229,29 @@ def profile():
     
     if request.method == 'POST':
         data = request.json
-        conn = sqlite3.connect('agent_system.db')
+        conn = get_db_connection()
         c = conn.cursor()
         
-        c.execute('''INSERT OR REPLACE INTO profiles 
+        c.execute('''INSERT INTO profiles 
                      (user_id, full_name, email, phone, address, linkedin_url, resume_path, skills, 
                       city, state, pincode, experience, age, preferred_job_title, preferred_location, expected_salary)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                     ON CONFLICT (user_id) DO UPDATE SET
+                     full_name = EXCLUDED.full_name,
+                     email = EXCLUDED.email,
+                     phone = EXCLUDED.phone,
+                     address = EXCLUDED.address,
+                     linkedin_url = EXCLUDED.linkedin_url,
+                     resume_path = EXCLUDED.resume_path,
+                     skills = EXCLUDED.skills,
+                     city = EXCLUDED.city,
+                     state = EXCLUDED.state,
+                     pincode = EXCLUDED.pincode,
+                     experience = EXCLUDED.experience,
+                     age = EXCLUDED.age,
+                     preferred_job_title = EXCLUDED.preferred_job_title,
+                     preferred_location = EXCLUDED.preferred_location,
+                     expected_salary = EXCLUDED.expected_salary''',
                   (session['user_id'], data.get('full_name'), data.get('email'),
                    data.get('phone'), data.get('address'), data.get('linkedin_url'),
                    data.get('resume_path'), data.get('skills'), data.get('city'),
@@ -239,9 +263,9 @@ def profile():
         
         return jsonify({'success': True, 'message': 'Profile updated'})
     
-    conn = sqlite3.connect('agent_system.db')
+    conn = get_db_connection()
     c = conn.cursor()
-    c.execute('SELECT * FROM profiles WHERE user_id = ?', (session['user_id'],))
+    c.execute('SELECT * FROM profiles WHERE user_id = %s', (session['user_id'],))
     profile_data = c.fetchone()
     conn.close()
     
@@ -270,15 +294,15 @@ def run_task():
     task_description = data.get('task')
     
     # Save task to database
-    conn = sqlite3.connect('agent_system.db')
+    conn = get_db_connection()
     c = conn.cursor()
-    c.execute('INSERT INTO tasks (user_id, task_description, status) VALUES (?, ?, ?)',
+    c.execute('INSERT INTO tasks (user_id, task_description, status) VALUES (%s, %s, %s) RETURNING id',
               (session['user_id'], task_description, 'running'))
-    task_id = c.lastrowid
+    task_id = c.fetchone()['id']
     conn.commit()
     
     # Get user profile for form filling
-    c.execute('SELECT * FROM profiles WHERE user_id = ?', (session['user_id'],))
+    c.execute('SELECT * FROM profiles WHERE user_id = %s', (session['user_id'],))
     profile = c.fetchone()
     conn.close()
     
@@ -339,11 +363,11 @@ def run_task():
             result = {'status': 'error', 'message': 'No matching ability found'}
         
         # Update database with result
-        conn = sqlite3.connect('agent_system.db')
+        conn = get_db_connection()
         c = conn.cursor()
         c.execute('''UPDATE tasks 
-                     SET status = ?, result = ?, completed_at = CURRENT_TIMESTAMP 
-                     WHERE id = ?''',
+                     SET status = %s, result = %s, completed_at = CURRENT_TIMESTAMP 
+                     WHERE id = %s''',
                   ('completed', str(result), task_id))
         conn.commit()
         conn.close()
@@ -355,9 +379,9 @@ def run_task():
     
     except Exception as e:
         # Handle errors
-        conn = sqlite3.connect('agent_system.db')
+        conn = get_db_connection()
         c = conn.cursor()
-        c.execute('UPDATE tasks SET status = ?, result = ? WHERE id = ?',
+        c.execute('UPDATE tasks SET status = %s, result = %s WHERE id = %s',
                   ('failed', str(e), task_id))
         conn.commit()
         conn.close()
