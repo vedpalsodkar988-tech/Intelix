@@ -156,8 +156,44 @@
         function displayResult(result) {
             const log = document.getElementById('statusLog');
             
-            // Handle INTERNSHIP SEARCH results (NEW!)
-            if (result.internships && result.internships.length > 0) {
+            // Handle SHOPPING results (NEW!)
+            if (result.best_deal && result.top_products) {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'shopping-results';
+                resultDiv.style.cssText = 'background: rgba(236, 72, 153, 0.1); border-left: 4px solid #ec4899; padding: 20px; margin: 15px 0; border-radius: 12px;';
+                
+                let html = '<div style="color: #ec4899; font-weight: bold; font-size: 18px; margin-bottom: 15px;">🛒 BEST SHOPPING DEALS</div>';
+                
+                if (result.total_products) {
+                    html += `<div style="color: #8b92b0; font-size: 13px; margin-bottom: 15px;">Found ${result.total_products} products. Showing TOP 3 best deals:</div>`;
+                }
+                
+                // Display top 3 products
+                result.top_products.forEach((product, idx) => {
+                    const isBestDeal = idx === 0;
+                    html += `
+                        <div style="background: rgba(26, 31, 58, 0.8); border: 2px solid ${isBestDeal ? '#ec4899' : 'rgba(236, 72, 153, 0.3)'}; border-radius: 10px; padding: 15px; margin-bottom: 12px; position: relative;">
+                            ${isBestDeal ? '<div style="position: absolute; top: -10px; right: 15px; background: linear-gradient(135deg, #ec4899, #d946ef); color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: bold;">🏆 BEST DEAL</div>' : ''}
+                            <div style="color: #ec4899; font-weight: bold; font-size: 16px; margin-bottom: 8px;">${idx + 1}. ${product.title}</div>
+                            <div style="color: #e2e8f0; margin-bottom: 6px;">
+                                <span style="color: #8b92b0;">Site:</span> <strong>${product.site}</strong>
+                            </div>
+                            <div style="color: #10b981; font-weight: bold; font-size: 20px; margin-bottom: 10px;">
+                                ${product.price_text}
+                            </div>
+                            <a href="${product.link}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #ec4899 0%, #d946ef 100%); color: white; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600;">
+                                Buy Now on ${product.site} →
+                            </a>
+                        </div>
+                    `;
+                });
+                
+                resultDiv.innerHTML = html;
+                log.appendChild(resultDiv);
+                log.scrollTop = log.scrollHeight;
+            }
+            // Handle INTERNSHIP SEARCH results
+            else if (result.internships && result.internships.length > 0) {
                 const resultDiv = document.createElement('div');
                 resultDiv.className = 'internship-results';
                 resultDiv.style.cssText = 'background: rgba(139, 92, 246, 0.1); border-left: 4px solid #8b5cf6; padding: 20px; margin: 15px 0; border-radius: 12px;';
@@ -233,7 +269,6 @@
                     `;
                 });
                 
-                // Show searches remaining
                 if (result.searches_remaining !== undefined) {
                     html += `<div style="margin-top: 15px; padding: 10px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; text-align: center; color: #60a5fa; font-size: 13px;">
                         📊 Searches remaining today: <strong>${result.searches_remaining}/3</strong> (FREE tier)
