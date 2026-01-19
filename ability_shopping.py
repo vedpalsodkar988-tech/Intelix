@@ -60,40 +60,52 @@ def shopping_assistant_task(query, user_profile=None):
             
             products = []
             
-            # Wait for product results
+            # Wait for product results - try multiple selectors
             try:
-                page.wait_for_selector("div.sh-dgr__content", timeout=20000)
+                page.wait_for_selector("div.sh-dgr__grid-result", timeout=20000)
+                items = page.locator("div.sh-dgr__grid-result").all()[:10]
             except:
-                print("⚠️ No results container found")
-                browser.close()
-                return {"status": "error", "message": "No products found"}
-            
-            # Get all product items
-            items = page.locator("div.sh-dgr__content").all()[:10]
+                try:
+                    page.wait_for_selector("div[data-docid]", timeout=10000)
+                    items = page.locator("div[data-docid]").all()[:10]
+                except:
+                    try:
+                        page.wait_for_selector(".sh-dlr__list-result", timeout=10000)
+                        items = page.locator(".sh-dlr__list-result").all()[:10]
+                    except:
+                        print("⚠️ No results container found")
+                        browser.close()
+                        return {"status": "error", "message": "No products found"}
             print(f"Found {len(items)} product listings")
             
             for idx, item in enumerate(items):
                 try:
-                    # Extract title
+                    # Extract title - multiple selectors
                     title = None
-                    try:
-                        title = item.locator("h3, h4, .tAxDx").first.inner_text(timeout=3000)
-                    except:
+                    title_selectors = ["h3", "h4", ".tAxDx", "span[role='heading']", ".Xjkr3b", "a"]
+                    for sel in title_selectors:
                         try:
-                            title = item.locator("a[aria-label]").first.get_attribute("aria-label", timeout=3000)
+                            elem = item.locator(sel).first
+                            if elem.count() > 0:
+                                title = elem.inner_text(timeout=2000)
+                                if title and len(title) > 5:
+                                    break
                         except:
                             continue
                     
                     if not title or len(title) < 5:
                         continue
                     
-                    # Extract price
+                    # Extract price - multiple selectors
                     price_text = None
-                    try:
-                        price_text = item.locator("span.a8Pemb").first.inner_text(timeout=3000)
-                    except:
+                    price_selectors = ["span.a8Pemb", "div.a8Pemb", ".T14wmb", "span[aria-label*='₹']", "b"]
+                    for sel in price_selectors:
                         try:
-                            price_text = item.locator("div.a8Pemb").first.inner_text(timeout=3000)
+                            elem = item.locator(sel).first
+                            if elem.count() > 0:
+                                price_text = elem.inner_text(timeout=2000)
+                                if price_text and any(char.isdigit() for char in price_text):
+                                    break
                         except:
                             continue
                     
