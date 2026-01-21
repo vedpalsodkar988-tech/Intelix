@@ -181,18 +181,33 @@ def login():
         username = data.get('username')
         password = data.get('password')
         
-        conn = get_db_connection()
-        c = conn.cursor()
-        c.execute('SELECT * FROM users WHERE username = %s', (username,))
-        user = c.fetchone()
-        conn.close()
+        print(f"🔐 Login attempt for user: {username}")
         
-        if user and check_password_hash(user['password'], password):
-            session['user_id'] = user['id']
-            session['username'] = user['username']
-            return jsonify({'success': True, 'message': 'Login successful'})
-        else:
-            return jsonify({'success': False, 'message': 'Invalid credentials'})
+        try:
+            conn = get_db_connection()
+            c = conn.cursor()
+            c.execute('SELECT * FROM users WHERE username = %s', (username,))
+            user = c.fetchone()
+            conn.close()
+            
+            if not user:
+                print(f"❌ User {username} not found")
+                return jsonify({'success': False, 'message': 'Invalid credentials'})
+            
+            print(f"✅ User found, checking password...")
+            
+            if check_password_hash(user['password'], password):
+                session['user_id'] = user['id']
+                session['username'] = user['username']
+                print(f"✅ Login successful for {username}")
+                return jsonify({'success': True, 'message': 'Login successful'})
+            else:
+                print(f"❌ Invalid password for {username}")
+                return jsonify({'success': False, 'message': 'Invalid credentials'})
+                
+        except Exception as e:
+            print(f"❌ Login error: {str(e)}")
+            return jsonify({'success': False, 'message': f'Error: {str(e)}'})
     
     return render_template('login.html')
 
@@ -204,7 +219,8 @@ def signup():
         email = data.get('email')
         password = data.get('password')
         
-        hashed_password = generate_password_hash(password)
+        # Use method='pbkdf2:sha256' for consistent hashing
+        hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
         
         try:
             conn = get_db_connection()
@@ -212,10 +228,26 @@ def signup():
             c.execute('INSERT INTO users (username, email, password) VALUES (%s, %s, %s)',
                      (username, email, hashed_password))
             conn.commit()
+            
+            # Auto-login after signup
+            c.execute('SELECT * FROM users WHERE username = %s', (username,))
+            user = c.fetchone()
             conn.close()
-            return jsonify({'success': True, 'message': 'Account created successfully'})
-        except psycopg2.IntegrityError:
+            
+            if user:
+                session['user_id'] = user['id']
+                session['username'] = user['username']
+                print(f"✅ User {username} created and logged in successfully!")
+                return jsonify({'success': True, 'message': 'Account created successfully'})
+            else:
+                return jsonify({'success': False, 'message': 'Account created but login failed'})
+                
+        except psycopg2.IntegrityError as e:
+            print(f"❌ Signup error: {str(e)}")
             return jsonify({'success': False, 'message': 'Username or email already exists'})
+        except Exception as e:
+            print(f"❌ Signup error: {str(e)}")
+            return jsonify({'success': False, 'message': f'Error: {str(e)}'})
     
     return render_template('signup.html')
 
