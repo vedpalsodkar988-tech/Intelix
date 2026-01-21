@@ -26,9 +26,18 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-this-in-production')
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
-# PostgreSQL connection
+# PostgreSQL connection - FIXED
 def get_db_connection():
-    database_url = os.environ.get('DATABASE_URL')
+    # Use INTELIX_DATABASE_URL instead of DATABASE_URL
+    database_url = os.environ.get('INTELIX_DATABASE_URL')
+    
+    if not database_url:
+        raise ValueError("INTELIX_DATABASE_URL environment variable not set!")
+    
+    # Fix for Render's postgres:// URL format (psycopg2 needs postgresql://)
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    
     conn = psycopg2.connect(database_url, cursor_factory=RealDictCursor)
     return conn
 
