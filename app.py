@@ -26,70 +26,84 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-this-in-production')
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
-# PostgreSQL connection - FIXED
+# PostgreSQL connection - UPDATED FOR RENDER AUTO-CONNECTION
 def get_db_connection():
-    # Use INTELIX_DATABASE_URL instead of DATABASE_URL
-    database_url = os.environ.get('INTELIX_DATABASE_URL')
+    # Try DATABASE_URL first (Render's auto-generated), then INTELIX_DATABASE_URL
+    database_url = os.environ.get('DATABASE_URL') or os.environ.get('INTELIX_DATABASE_URL')
     
     if not database_url:
-        raise ValueError("INTELIX_DATABASE_URL environment variable not set!")
+        raise ValueError("No database URL found! Make sure DATABASE_URL or INTELIX_DATABASE_URL is set in Render environment variables.")
+    
+    # Remove any whitespace
+    database_url = database_url.strip()
     
     # Fix for Render's postgres:// URL format (psycopg2 needs postgresql://)
     if database_url.startswith('postgres://'):
         database_url = database_url.replace('postgres://', 'postgresql://', 1)
     
-    conn = psycopg2.connect(database_url, cursor_factory=RealDictCursor)
-    return conn
+    print(f"🔗 Attempting to connect to database...") # Debug log
+    
+    try:
+        conn = psycopg2.connect(database_url, cursor_factory=RealDictCursor)
+        print("✅ Database connected successfully!") # Debug log
+        return conn
+    except Exception as e:
+        print(f"❌ Database connection failed: {str(e)}")
+        raise
 
 # Database setup
 def init_db():
-    conn = get_db_connection()
-    c = conn.cursor()
-    
-    # Users table
-    c.execute('''CREATE TABLE IF NOT EXISTS users
-                 (id SERIAL PRIMARY KEY,
-                  username TEXT UNIQUE NOT NULL,
-                  email TEXT UNIQUE NOT NULL,
-                  password TEXT NOT NULL,
-                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-    
-    # Tasks table
-    c.execute('''CREATE TABLE IF NOT EXISTS tasks
-                 (id SERIAL PRIMARY KEY,
-                  user_id INTEGER,
-                  task_description TEXT NOT NULL,
-                  status TEXT DEFAULT 'pending',
-                  result TEXT,
-                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                  completed_at TIMESTAMP,
-                  FOREIGN KEY(user_id) REFERENCES users(id))''')
-    
-    # Profile data table
-    c.execute('''CREATE TABLE IF NOT EXISTS profiles
-                 (id SERIAL PRIMARY KEY,
-                  user_id INTEGER UNIQUE,
-                  full_name TEXT,
-                  email TEXT,
-                  phone TEXT,
-                  address TEXT,
-                  linkedin_url TEXT,
-                  resume_path TEXT,
-                  skills TEXT,
-                  city TEXT,
-                  state TEXT,
-                  pincode TEXT,
-                  experience TEXT,
-                  age INTEGER,
-                  preferred_job_title TEXT,
-                  preferred_location TEXT,
-                  expected_salary TEXT,
-                  FOREIGN KEY(user_id) REFERENCES users(id))''')
-    
-    print("✅ Database tables created successfully!")
-    
-    conn.commit()
-    conn.close()
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Users table
+        c.execute('''CREATE TABLE IF NOT EXISTS users
+                     (id SERIAL PRIMARY KEY,
+                      username TEXT UNIQUE NOT NULL,
+                      email TEXT UNIQUE NOT NULL,
+                      password TEXT NOT NULL,
+                      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+        
+        # Tasks table
+        c.execute('''CREATE TABLE IF NOT EXISTS tasks
+                     (id SERIAL PRIMARY KEY,
+                      user_id INTEGER,
+                      task_description TEXT NOT NULL,
+                      status TEXT DEFAULT 'pending',
+                      result TEXT,
+                      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                      completed_at TIMESTAMP,
+                      FOREIGN KEY(user_id) REFERENCES users(id))''')
+        
+        # Profile data table
+        c.execute('''CREATE TABLE IF NOT EXISTS profiles
+                     (id SERIAL PRIMARY KEY,
+                      user_id INTEGER UNIQUE,
+                      full_name TEXT,
+                      email TEXT,
+                      phone TEXT,
+                      address TEXT,
+                      linkedin_url TEXT,
+                      resume_path TEXT,
+                      skills TEXT,
+                      city TEXT,
+                      state TEXT,
+                      pincode TEXT,
+                      experience TEXT,
+                      age INTEGER,
+                      preferred_job_title TEXT,
+                      preferred_location TEXT,
+                      expected_salary TEXT,
+                      FOREIGN KEY(user_id) REFERENCES users(id))''')
+        
+        print("✅ Database tables created successfully!")
+        
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"❌ Database initialization failed: {str(e)}")
+        raise
 
 init_db()
 
