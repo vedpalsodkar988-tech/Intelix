@@ -25,11 +25,13 @@ def shopping_assistant_task(query, user_profile=None):
     product_query = re.sub(r'\s+', ' ', product_query)
     print(f"Cleaned query: {product_query}")
     
-    # Get API key from environment
-    api_key = os.environ.get('RAPIDAPI_KEY')
+    # Get API key from environment - FIXED: Added .strip() to remove whitespace
+    api_key = os.environ.get('RAPIDAPI_KEY', '').strip()
     if not api_key:
         print("❌ ERROR: RAPIDAPI_KEY not found in environment variables!")
         return {"status": "error", "message": "API key not configured"}
+    
+    print(f"✅ API Key loaded (length: {len(api_key)} chars)")
     
     try:
         # Call RapidAPI Real-Time Product Search
@@ -51,6 +53,7 @@ def shopping_assistant_task(query, user_profile=None):
         
         if response.status_code != 200:
             print(f"❌ API Error: Status {response.status_code}")
+            print(f"Response: {response.text[:200]}")
             return {"status": "error", "message": f"API error: {response.status_code}"}
         
         data = response.json()
