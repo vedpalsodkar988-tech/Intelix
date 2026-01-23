@@ -20,9 +20,17 @@ def shopping_assistant_task(query, user_profile=None):
     print("🛒 AI Shopping Assistant Starting (SerpAPI)...")
     print(f"Query: {query}")
     
-    # Clean the query
-    product_query = re.sub(r'\b(find|search|buy|order|get|purchase|best|top)\b', '', query.lower()).strip()
+    # Clean the query - keep price ranges
+    product_query = query.lower()
+    # Remove action words but keep product and price info
+    product_query = re.sub(r'\b(find|search|buy|order|get|purchase|best|top)\b', '', product_query).strip()
     product_query = re.sub(r'\s+', ' ', product_query)
+    
+    # If query has "under" price, convert to better format for shopping
+    # Example: "laptop under 50000" -> "laptop under 50000 rupees"
+    if 'under' in product_query and not any(word in product_query for word in ['rupees', 'rs', '₹', 'inr']):
+        product_query = product_query + " rupees"
+    
     print(f"Cleaned query: {product_query}")
     
     # Get API key from environment
@@ -41,10 +49,11 @@ def shopping_assistant_task(query, user_profile=None):
             "engine": "google_shopping",
             "q": product_query,
             "api_key": api_key,
-            "location": "India",
+            "location": "Delhi, India",  # More specific location
             "hl": "en",
             "gl": "in",
-            "num": "20"  # Get 20 results
+            "num": "30",  # Get more results
+            "no_cache": "true"  # Don't use cached results
         }
         
         print(f"📡 Calling SerpAPI Google Shopping with query: '{product_query}'...")
@@ -191,10 +200,18 @@ def shopping_assistant_task(query, user_profile=None):
             print("⚠️ No products found in API response")
             available_keys = list(data.keys())
             print(f"Available keys in response: {available_keys}")
+            
+            # Print first few items from response for debugging
+            if 'shopping_results' in data:
+                print(f"shopping_results exists but empty or unparseable")
+            if 'inline_shopping_results' in data:
+                print(f"inline_shopping_results exists but empty or unparseable")
+            
+            # Try to provide helpful message
             return {
                 "status": "error", 
-                "message": "No products found. Try a different search term.",
-                "debug_info": f"API response keys: {available_keys}"
+                "message": f"No products found for '{product_query}'. Try searching for just the product name (e.g., 'laptop' or 'gaming laptop')",
+                "suggestion": "Try simpler search terms like: 'laptop', 'iPhone', 'headphones', etc."
             }
         
         # Sort by price - cheapest first
