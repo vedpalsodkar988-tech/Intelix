@@ -136,8 +136,8 @@ def shopping_assistant_task(query, user_profile=None):
                     elif 'reliance' in source.lower():
                         source = "Reliance Digital"
                     
-                    # Get product link
-                    link = item.get('link', '')
+                    # Get product link - SerpAPI uses 'product_link' not 'link'!
+                    link = item.get('product_link', '')
                     
                     if not link or not link.startswith('http'):
                         print(f"  ✗ Item {idx+1}: No valid link")
