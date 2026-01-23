@@ -16,56 +16,49 @@ def extract_price(price_text):
 
 
 def shopping_assistant_task(query, user_profile=None):
-    """AI Shopping Assistant using RapidAPI Real-Time Product Search"""
-    print("🛒 AI Shopping Assistant Starting (RapidAPI)...")
+    """AI Shopping Assistant using SerpAPI Google Shopping"""
+    print("🛒 AI Shopping Assistant Starting (SerpAPI)...")
     print(f"Query: {query}")
     
     # Clean the query
-    product_query = re.sub(r'\b(find|search|buy|order|get|purchase|best|top|under)\b', '', query.lower()).strip()
+    product_query = re.sub(r'\b(find|search|buy|order|get|purchase|best|top)\b', '', query.lower()).strip()
     product_query = re.sub(r'\s+', ' ', product_query)
     print(f"Cleaned query: {product_query}")
     
-    # Get API key from environment - strip whitespace
-    api_key = os.environ.get('RAPIDAPI_KEY', '').strip()
+    # Get API key from environment
+    api_key = os.environ.get('SERPAPI_KEY', '').strip()
     if not api_key:
-        print("❌ ERROR: RAPIDAPI_KEY not found in environment variables!")
-        return {"status": "error", "message": "API key not configured"}
+        print("❌ ERROR: SERPAPI_KEY not found in environment variables!")
+        return {"status": "error", "message": "SerpAPI key not configured"}
     
-    print(f"✅ API Key loaded (length: {len(api_key)} chars)")
+    print(f"✅ SerpAPI Key loaded")
     
     try:
-        # CORRECTED ENDPOINT - Using the right path
-        url = "https://real-time-product-search.p.rapidapi.com/search"
+        # SerpAPI Google Shopping endpoint
+        url = "https://serpapi.com/search"
         
-        headers = {
-            "x-rapidapi-key": api_key,  # Changed to lowercase 'x'
-            "x-rapidapi-host": "real-time-product-search.p.rapidapi.com"  # Changed to lowercase 'x'
-        }
-        
-        # Updated parameters based on API docs
         params = {
+            "engine": "google_shopping",
             "q": product_query,
-            "country": "in",
-            "language": "en",
-            "limit": "20"  # Get more results
+            "api_key": api_key,
+            "location": "India",
+            "hl": "en",
+            "gl": "in",
+            "num": "20"  # Get 20 results
         }
         
-        print(f"📡 Calling RapidAPI with query: '{product_query}'...")
-        response = requests.get(url, headers=headers, params=params, timeout=30)
+        print(f"📡 Calling SerpAPI Google Shopping with query: '{product_query}'...")
+        response = requests.get(url, params=params, timeout=30)
         
         print(f"Response Status: {response.status_code}")
         
-        if response.status_code == 404:
-            print("❌ 404 Error - API endpoint not found")
-            print("This might mean:")
-            print("1. Your subscription doesn't include this API")
-            print("2. The API endpoint has changed")
-            print("Please check your RapidAPI subscription")
-            return {"status": "error", "message": "API endpoint not found. Check your RapidAPI subscription."}
+        if response.status_code == 401:
+            print("❌ 401 Error - Invalid API key")
+            return {"status": "error", "message": "SerpAPI key is invalid"}
         
         if response.status_code == 403:
-            print("❌ 403 Error - Access forbidden")
-            return {"status": "error", "message": "API key invalid or subscription inactive"}
+            print("❌ 403 Error - API limit exceeded or account inactive")
+            return {"status": "error", "message": "SerpAPI limit exceeded or account inactive"}
         
         if response.status_code != 200:
             print(f"❌ API Error: Status {response.status_code}")
@@ -73,81 +66,135 @@ def shopping_assistant_task(query, user_profile=None):
             return {"status": "error", "message": f"API error: {response.status_code}"}
         
         data = response.json()
-        print(f"✅ API Response received")
+        print(f"✅ SerpAPI Response received")
         
-        # Debug: Print response structure
-        print(f"Response keys: {list(data.keys())}")
-        
-        # Parse results - Real-Time Product Search returns data in 'data' field
+        # Parse results
         products = []
         
-        if 'data' in data and isinstance(data['data'], list) and len(data['data']) > 0:
-            print(f"Found {len(data['data'])} products from API")
+        # SerpAPI returns results in 'shopping_results' field
+        if 'shopping_results' in data and len(data['shopping_results']) > 0:
+            print(f"Found {len(data['shopping_results'])} products from Google Shopping")
             
-            for idx, item in enumerate(data['data'][:20]):
+            for idx, item in enumerate(data['shopping_results'][:20]):
                 try:
-                    # Extract product details - adapting to actual API response
-                    title = item.get('product_title', '') or item.get('title', '')
+                    # Extract product details
+                    title = item.get('title', '')
                     if not title or len(title) < 5:
                         continue
                     
-                    # Try multiple price fields
-                    price_text = None
-                    if 'offer' in item and isinstance(item['offer'], dict):
-                        price_text = item['offer'].get('price')
-                    if not price_text:
-                        price_text = item.get('product_price') or item.get('price')
+                    # Get price - SerpAPI provides clean price data
+                    price_text = item.get('extracted_price') or item.get('price')
                     
                     if not price_text:
                         print(f"  ✗ Item {idx+1}: No price found")
                         continue
                     
-                    price = extract_price(price_text)
+                    # SerpAPI already gives numeric price in 'extracted_price'
+                    if isinstance(price_text, (int, float)):
+                        price = float(price_text)
+                    else:
+                        price = extract_price(price_text)
+                    
                     if price == float('inf') or price == 0:
                         continue
                     
-                    # Get merchant/site
-                    site = "Online Store"
-                    if 'offer' in item and isinstance(item['offer'], dict):
-                        site = item['offer'].get('store_name', 'Online Store')
+                    # Get source/merchant
+                    source = item.get('source', 'Online Store')
                     
-                    # Detect Amazon/Flipkart
-                    if 'amazon' in str(site).lower():
-                        site = "Amazon"
-                    elif 'flipkart' in str(site).lower():
-                        site = "Flipkart"
+                    # Detect major retailers
+                    if 'amazon' in source.lower():
+                        source = "Amazon"
+                    elif 'flipkart' in source.lower():
+                        source = "Flipkart"
+                    elif 'myntra' in source.lower():
+                        source = "Myntra"
+                    elif 'croma' in source.lower():
+                        source = "Croma"
+                    elif 'reliance' in source.lower():
+                        source = "Reliance Digital"
                     
                     # Get product link
-                    link = item.get('product_page_url', '')
-                    if not link and 'offer' in item and isinstance(item['offer'], dict):
-                        link = item['offer'].get('offer_page_url', '')
+                    link = item.get('link', '')
+                    
+                    if not link or not link.startswith('http'):
+                        continue
+                    
+                    # Get rating if available
+                    rating = item.get('rating', 0)
+                    reviews = item.get('reviews', 0)
+                    
+                    # Get delivery info if available
+                    delivery = item.get('delivery', 'Standard Delivery')
+                    
+                    products.append({
+                        "site": source,
+                        "title": title,
+                        "price": price,
+                        "price_text": f"₹{int(price):,}",
+                        "link": link,
+                        "rating": rating,
+                        "reviews": reviews,
+                        "delivery": delivery
+                    })
+                    
+                    print(f"  ✓ Item {idx+1}: {title[:50]}... - ₹{int(price):,} ({source})")
+                    
+                except Exception as e:
+                    print(f"  ✗ Error parsing item {idx+1}: {e}")
+                    continue
+        
+        # Also check 'inline_shopping_results' if shopping_results is empty
+        elif 'inline_shopping_results' in data and len(data['inline_shopping_results']) > 0:
+            print(f"Found {len(data['inline_shopping_results'])} inline products")
+            
+            for idx, item in enumerate(data['inline_shopping_results'][:20]):
+                try:
+                    title = item.get('title', '')
+                    if not title or len(title) < 5:
+                        continue
+                    
+                    price_text = item.get('extracted_price') or item.get('price')
+                    if not price_text:
+                        continue
+                    
+                    if isinstance(price_text, (int, float)):
+                        price = float(price_text)
+                    else:
+                        price = extract_price(price_text)
+                    
+                    if price == float('inf') or price == 0:
+                        continue
+                    
+                    source = item.get('source', 'Online Store')
+                    link = item.get('link', '')
                     
                     if not link or not link.startswith('http'):
                         continue
                     
                     products.append({
-                        "site": site,
+                        "site": source,
                         "title": title,
                         "price": price,
                         "price_text": f"₹{int(price):,}",
-                        "link": link
+                        "link": link,
+                        "rating": item.get('rating', 0),
+                        "reviews": item.get('reviews', 0)
                     })
                     
-                    print(f"  ✓ Item {idx+1}: {title[:50]}... - ₹{int(price):,} ({site})")
+                    print(f"  ✓ Item {idx+1}: {title[:50]}... - ₹{int(price):,} ({source})")
                     
                 except Exception as e:
                     print(f"  ✗ Error parsing item {idx+1}: {e}")
                     continue
-        else:
-            print(f"⚠️ Unexpected API response structure")
-            print(f"Response: {str(data)[:500]}")
         
         if not products:
             print("⚠️ No products found in API response")
+            available_keys = list(data.keys())
+            print(f"Available keys in response: {available_keys}")
             return {
                 "status": "error", 
                 "message": "No products found. Try a different search term.",
-                "debug_info": f"API returned {len(data.get('data', []))} items but none were parseable"
+                "debug_info": f"API response keys: {available_keys}"
             }
         
         # Sort by price - cheapest first
@@ -156,12 +203,19 @@ def shopping_assistant_task(query, user_profile=None):
         print(f"\n✅ Found {len(products)} valid products")
         print(f"🎯 BEST DEAL: {products[0]['title'][:50]}... - {products[0]['price_text']} ({products[0]['site']})")
         
+        # Create summary message
+        top_3_summary = "\n".join([
+            f"{i+1}. {p['title'][:60]} - {p['price_text']} ({p['site']})"
+            for i, p in enumerate(products[:3])
+        ])
+        
         return {
             "status": "success",
             "best_deal": products[0],
-            "top_products": products[:5],  # Return top 5 instead of 3
+            "top_products": products[:5],
             "total_products": len(products),
-            "message": f"Found {len(products)} products! Best deal: {products[0]['price_text']}"
+            "message": f"🎉 Found {len(products)} products!\n\n🏆 TOP 3 DEALS:\n{top_3_summary}",
+            "query": product_query
         }
         
     except requests.exceptions.Timeout:
