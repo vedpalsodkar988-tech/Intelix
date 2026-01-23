@@ -84,6 +84,13 @@ def shopping_assistant_task(query, user_profile=None):
         if 'shopping_results' in data and len(data['shopping_results']) > 0:
             print(f"Found {len(data['shopping_results'])} products from Google Shopping")
             
+            # DEBUG: Print first item structure to see actual fields
+            print("\n🔍 DEBUG - First item structure:")
+            first_item = data['shopping_results'][0]
+            print(f"Available fields: {list(first_item.keys())}")
+            print(f"Full first item: {first_item}")
+            print("=" * 80)
+            
             for idx, item in enumerate(data['shopping_results'][:20]):
                 try:
                     # Extract product details
