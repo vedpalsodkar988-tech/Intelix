@@ -89,22 +89,29 @@ def shopping_assistant_task(query, user_profile=None):
                     # Extract product details
                     title = item.get('title', '')
                     if not title or len(title) < 5:
+                        print(f"  ✗ Item {idx+1}: No title")
                         continue
                     
                     # Get price - SerpAPI provides clean price data
-                    price_text = item.get('extracted_price') or item.get('price')
+                    # Try multiple price fields
+                    price = None
                     
-                    if not price_text:
-                        print(f"  ✗ Item {idx+1}: No price found")
-                        continue
+                    # Method 1: Direct extracted_price (most reliable)
+                    if 'extracted_price' in item and item['extracted_price']:
+                        price = float(item['extracted_price'])
                     
-                    # SerpAPI already gives numeric price in 'extracted_price'
-                    if isinstance(price_text, (int, float)):
-                        price = float(price_text)
-                    else:
+                    # Method 2: Price field
+                    elif 'price' in item and item['price']:
+                        price_text = item['price']
                         price = extract_price(price_text)
                     
-                    if price == float('inf') or price == 0:
+                    # Method 3: Check if there's a sale price
+                    elif 'sale_price' in item and item['sale_price']:
+                        price_text = item['sale_price']
+                        price = extract_price(price_text)
+                    
+                    if not price or price == float('inf') or price == 0:
+                        print(f"  ✗ Item {idx+1}: No valid price (title: {title[:30]}...)")
                         continue
                     
                     # Get source/merchant
@@ -126,6 +133,7 @@ def shopping_assistant_task(query, user_profile=None):
                     link = item.get('link', '')
                     
                     if not link or not link.startswith('http'):
+                        print(f"  ✗ Item {idx+1}: No valid link")
                         continue
                     
                     # Get rating if available
@@ -150,6 +158,8 @@ def shopping_assistant_task(query, user_profile=None):
                     
                 except Exception as e:
                     print(f"  ✗ Error parsing item {idx+1}: {e}")
+                    import traceback
+                    traceback.print_exc()
                     continue
         
         # Also check 'inline_shopping_results' if shopping_results is empty
