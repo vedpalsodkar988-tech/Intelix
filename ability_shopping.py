@@ -88,7 +88,11 @@ def shopping_assistant_task(query, user_profile=None):
             print("\n🔍 DEBUG - First item structure:")
             first_item = data['shopping_results'][0]
             print(f"Available fields: {list(first_item.keys())}")
-            print(f"Full first item: {first_item}")
+            # Check if offers exist
+            if 'offers' in first_item:
+                print(f"✅ Offers found: {first_item['offers']}")
+            else:
+                print(f"⚠️ No 'offers' field in response")
             print("=" * 80)
             
             for idx, item in enumerate(data['shopping_results'][:20]):
@@ -136,8 +140,22 @@ def shopping_assistant_task(query, user_profile=None):
                     elif 'reliance' in source.lower():
                         source = "Reliance Digital"
                     
-                    # Get product link - SerpAPI uses 'product_link' not 'link'!
-                    link = item.get('product_link', '')
+                    # Get product link - Try to get direct merchant link first
+                    link = None
+                    
+                    # Check if there are offers with direct links
+                    if 'offers' in item and item['offers']:
+                        # Get the first offer's link (usually cheapest)
+                        first_offer = item['offers'][0] if isinstance(item['offers'], list) else item['offers']
+                        link = first_offer.get('link') or first_offer.get('offer_link')
+                    
+                    # Fallback to product_link (Google Shopping page)
+                    if not link:
+                        link = item.get('product_link', '')
+                    
+                    # Last fallback - try serpapi_product_page if available
+                    if not link:
+                        link = item.get('serpapi_product_page', '')
                     
                     if not link or not link.startswith('http'):
                         print(f"  ✗ Item {idx+1}: No valid link")
