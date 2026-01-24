@@ -24,47 +24,57 @@ def get_direct_merchant_link(serpapi_url, api_key):
         
         if response.status_code == 200:
             data = response.json()
-            print(f"    Available keys: {list(data.keys())}")
             
-            # Try to find direct merchant link in sellers_results
-            if 'sellers_results' in data and data['sellers_results']:
-                print(f"    ✅ Found {len(data['sellers_results'])} sellers")
+            # Check product_results field (this is where the data is!)
+            if 'product_results' in data and data['product_results']:
+                product = data['product_results']
+                print(f"    ✅ Found product_results")
+                
+                # Try to find sellers/offers inside product_results
+                if 'sellers' in product and product['sellers']:
+                    print(f"    ✅ Found {len(product['sellers'])} sellers")
+                    first_seller = product['sellers'][0]
+                    link = first_seller.get('link') or first_seller.get('url') or first_seller.get('product_link')
+                    if link and link.startswith('http'):
+                        print(f"    🎯 Direct link found: {link[:80]}...")
+                        return link
+                
+                # Try buying_options
+                if 'buying_options' in product and product['buying_options']:
+                    print(f"    ✅ Found buying_options")
+                    for option in product['buying_options']:
+                        link = option.get('link') or option.get('url')
+                        if link and link.startswith('http') and 'google.com' not in link:
+                            print(f"    🎯 Direct link found: {link[:80]}...")
+                            return link
+                
+                # Try offers
+                if 'offers' in product and product['offers']:
+                    print(f"    ✅ Found offers")
+                    for offer in product['offers']:
+                        link = offer.get('link') or offer.get('url')
+                        if link and link.startswith('http') and 'google.com' not in link:
+                            print(f"    🎯 Direct link found: {link[:80]}...")
+                            return link
+                
+                print(f"    ⚠️ No direct link in product_results")
+            
+            # Try top-level sellers_results as fallback
+            elif 'sellers_results' in data and data['sellers_results']:
+                print(f"    ✅ Found {len(data['sellers_results'])} sellers_results")
                 first_seller = data['sellers_results'][0]
-                print(f"    First seller fields: {list(first_seller.keys())}")
-                link = first_seller.get('link') or first_seller.get('offer_link') or first_seller.get('product_link')
+                link = first_seller.get('link') or first_seller.get('url')
                 if link:
                     print(f"    🎯 Direct link found: {link[:80]}...")
                     return link
             
-            # Try offers
-            elif 'offers' in data and data['offers']:
-                print(f"    ✅ Found offers")
-                first_offer = data['offers'][0] if isinstance(data['offers'], list) else data['offers']
-                print(f"    First offer fields: {list(first_offer.keys())}")
-                link = first_offer.get('link') or first_offer.get('offer_link')
-                if link:
-                    print(f"    🎯 Direct link found: {link[:80]}...")
-                    return link
-            
-            # Try buying_options
-            elif 'buying_options' in data and data['buying_options']:
-                print(f"    ✅ Found buying_options")
-                first_option = data['buying_options'][0]
-                link = first_option.get('link') or first_option.get('url')
-                if link:
-                    print(f"    🎯 Direct link found: {link[:80]}...")
-                    return link
-            
-            print(f"    ⚠️ No direct link found in response")
-            print(f"    Response sample: {str(data)[:500]}")
+            print(f"    ⚠️ No direct merchant link found")
         else:
             print(f"    ❌ API call failed: {response.status_code}")
         
         return None
     except Exception as e:
         print(f"    ❌ Error: {e}")
-        import traceback
-        traceback.print_exc()
         return None
 
 
