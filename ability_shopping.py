@@ -15,6 +15,26 @@ def extract_price(price_text):
         return float('inf')
 
 
+def get_direct_merchant_link(serpapi_url, api_key):
+    """Get direct merchant link from SerpAPI immersive product page"""
+    try:
+        response = requests.get(serpapi_url, params={"api_key": api_key}, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            # Try to find direct merchant link in offers
+            if 'sellers_results' in data and data['sellers_results']:
+                # Get first seller (usually best price)
+                first_seller = data['sellers_results'][0]
+                return first_seller.get('link') or first_seller.get('offer_link')
+            elif 'offers' in data and data['offers']:
+                first_offer = data['offers'][0]
+                return first_offer.get('link') or first_offer.get('offer_link')
+        return None
+    except Exception as e:
+        print(f"  ⚠️ Failed to get direct link: {e}")
+        return None
+
+
 def shopping_assistant_task(query, user_profile=None):
     """AI Shopping Assistant using SerpAPI Google Shopping"""
     print("🛒 AI Shopping Assistant Starting (SerpAPI)...")
@@ -140,22 +160,25 @@ def shopping_assistant_task(query, user_profile=None):
                     elif 'reliance' in source.lower():
                         source = "Reliance Digital"
                     
-                    # Get product link - Try to get direct merchant link first
+                    # Get product link - Try multiple methods
                     link = None
+                    direct_link_attempted = False
                     
-                    # Check if there are offers with direct links
-                    if 'offers' in item and item['offers']:
-                        # Get the first offer's link (usually cheapest)
-                        first_offer = item['offers'][0] if isinstance(item['offers'], list) else item['offers']
-                        link = first_offer.get('link') or first_offer.get('offer_link')
+                    # Method 1: Try to get direct link via immersive product API
+                    if 'serpapi_immersive_product_api' in item:
+                        immersive_url = item['serpapi_immersive_product_api']
+                        print(f"  🔗 Fetching direct link for item {idx+1}...")
+                        direct_link = get_direct_merchant_link(immersive_url, api_key)
+                        if direct_link:
+                            link = direct_link
+                            print(f"  ✅ Got direct merchant link!")
+                            direct_link_attempted = True
                     
-                    # Fallback to product_link (Google Shopping page)
+                    # Method 2: Fallback to product_link (Google Shopping page)
                     if not link:
                         link = item.get('product_link', '')
-                    
-                    # Last fallback - try serpapi_product_page if available
-                    if not link:
-                        link = item.get('serpapi_product_page', '')
+                        if not direct_link_attempted:
+                            print(f"  ⚠️ Using Google Shopping link (no immersive API)")
                     
                     if not link or not link.startswith('http'):
                         print(f"  ✗ Item {idx+1}: No valid link")
