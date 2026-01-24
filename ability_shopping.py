@@ -18,20 +18,53 @@ def extract_price(price_text):
 def get_direct_merchant_link(serpapi_url, api_key):
     """Get direct merchant link from SerpAPI immersive product page"""
     try:
+        print(f"    📞 Calling immersive API...")
         response = requests.get(serpapi_url, params={"api_key": api_key}, timeout=10)
+        print(f"    Response status: {response.status_code}")
+        
         if response.status_code == 200:
             data = response.json()
-            # Try to find direct merchant link in offers
+            print(f"    Available keys: {list(data.keys())}")
+            
+            # Try to find direct merchant link in sellers_results
             if 'sellers_results' in data and data['sellers_results']:
-                # Get first seller (usually best price)
+                print(f"    ✅ Found {len(data['sellers_results'])} sellers")
                 first_seller = data['sellers_results'][0]
-                return first_seller.get('link') or first_seller.get('offer_link')
+                print(f"    First seller fields: {list(first_seller.keys())}")
+                link = first_seller.get('link') or first_seller.get('offer_link') or first_seller.get('product_link')
+                if link:
+                    print(f"    🎯 Direct link found: {link[:80]}...")
+                    return link
+            
+            # Try offers
             elif 'offers' in data and data['offers']:
-                first_offer = data['offers'][0]
-                return first_offer.get('link') or first_offer.get('offer_link')
+                print(f"    ✅ Found offers")
+                first_offer = data['offers'][0] if isinstance(data['offers'], list) else data['offers']
+                print(f"    First offer fields: {list(first_offer.keys())}")
+                link = first_offer.get('link') or first_offer.get('offer_link')
+                if link:
+                    print(f"    🎯 Direct link found: {link[:80]}...")
+                    return link
+            
+            # Try buying_options
+            elif 'buying_options' in data and data['buying_options']:
+                print(f"    ✅ Found buying_options")
+                first_option = data['buying_options'][0]
+                link = first_option.get('link') or first_option.get('url')
+                if link:
+                    print(f"    🎯 Direct link found: {link[:80]}...")
+                    return link
+            
+            print(f"    ⚠️ No direct link found in response")
+            print(f"    Response sample: {str(data)[:500]}")
+        else:
+            print(f"    ❌ API call failed: {response.status_code}")
+        
         return None
     except Exception as e:
-        print(f"  ⚠️ Failed to get direct link: {e}")
+        print(f"    ❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 
