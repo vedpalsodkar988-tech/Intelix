@@ -1,6 +1,8 @@
 import requests
 import os
 import re
+from bs4 import BeautifulSoup
+from urllib.parse import quote_plus
 
 
 def extract_price(price_text):
@@ -9,341 +11,291 @@ def extract_price(price_text):
         return float('inf')
     # Handle different formats
     clean = str(price_text).replace('₹', '').replace('Rs', '').replace('$', '').replace(',', '').replace(' ', '')
+    # Remove any non-numeric characters except decimal point
+    clean = re.sub(r'[^\d.]', '', clean)
     try:
         return float(clean)
     except:
         return float('inf')
 
 
-def get_direct_merchant_link(serpapi_url, api_key):
-    """Get direct merchant link from SerpAPI immersive product page"""
+def scrape_amazon_products(query):
+    """Scrape Amazon India for products"""
+    print("  🔍 Scraping Amazon India...")
+    
     try:
-        print(f"    📞 Calling immersive API...")
-        response = requests.get(serpapi_url, params={"api_key": api_key}, timeout=10)
-        print(f"    Response status: {response.status_code}")
+        # Amazon search URL
+        search_url = f"https://www.amazon.in/s?k={quote_plus(query)}"
         
-        if response.status_code == 200:
-            data = response.json()
-            
-            # Check product_results field (this is where the data is!)
-            if 'product_results' in data and data['product_results']:
-                product = data['product_results']
-                print(f"    ✅ Found product_results")
-                
-                # Try to find sellers/offers inside product_results
-                if 'sellers' in product and product['sellers']:
-                    print(f"    ✅ Found {len(product['sellers'])} sellers")
-                    first_seller = product['sellers'][0]
-                    link = first_seller.get('link') or first_seller.get('url') or first_seller.get('product_link')
-                    if link and link.startswith('http'):
-                        print(f"    🎯 Direct link found: {link[:80]}...")
-                        return link
-                
-                # Try buying_options
-                if 'buying_options' in product and product['buying_options']:
-                    print(f"    ✅ Found buying_options")
-                    for option in product['buying_options']:
-                        link = option.get('link') or option.get('url')
-                        if link and link.startswith('http') and 'google.com' not in link:
-                            print(f"    🎯 Direct link found: {link[:80]}...")
-                            return link
-                
-                # Try offers
-                if 'offers' in product and product['offers']:
-                    print(f"    ✅ Found offers")
-                    for offer in product['offers']:
-                        link = offer.get('link') or offer.get('url')
-                        if link and link.startswith('http') and 'google.com' not in link:
-                            print(f"    🎯 Direct link found: {link[:80]}...")
-                            return link
-                
-                print(f"    ⚠️ No direct link in product_results")
-            
-            # Try top-level sellers_results as fallback
-            elif 'sellers_results' in data and data['sellers_results']:
-                print(f"    ✅ Found {len(data['sellers_results'])} sellers_results")
-                first_seller = data['sellers_results'][0]
-                link = first_seller.get('link') or first_seller.get('url')
-                if link:
-                    print(f"    🎯 Direct link found: {link[:80]}...")
-                    return link
-            
-            print(f"    ⚠️ No direct merchant link found")
-        else:
-            print(f"    ❌ API call failed: {response.status_code}")
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
+        }
         
-        return None
+        response = requests.get(search_url, headers=headers, timeout=20)
+        
+        if response.status_code != 200:
+            print(f"  ❌ Amazon returned status {response.status_code}")
+            return []
+        
+        soup = BeautifulSoup(response.content, 'html.parser')
+        products = []
+        
+        # Find product cards - Amazon uses these classes
+        product_divs = soup.find_all('div', {'data-component-type': 's-search-result'})
+        
+        print(f"  ✅ Found {len(product_divs)} Amazon products")
+        
+        for div in product_divs[:10]:
+            try:
+                # Get title
+                title_elem = div.find('h2', class_='a-size-mini')
+                if not title_elem:
+                    title_elem = div.find('span', class_='a-size-medium')
+                if not title_elem:
+                    continue
+                
+                title = title_elem.get_text().strip()
+                
+                if not title or len(title) < 5:
+                    continue
+                
+                # Get price
+                price_elem = div.find('span', class_='a-price-whole')
+                if not price_elem:
+                    continue
+                
+                price_text = price_elem.get_text().strip()
+                price = extract_price(price_text)
+                
+                if price == float('inf') or price == 0:
+                    continue
+                
+                # Get DIRECT product link
+                link_elem = div.find('a', class_='a-link-normal')
+                if not link_elem or not link_elem.get('href'):
+                    continue
+                
+                link = link_elem['href']
+                
+                # Make it a full URL
+                if link.startswith('/'):
+                    link = f"https://www.amazon.in{link}"
+                elif not link.startswith('http'):
+                    link = f"https://www.amazon.in/{link}"
+                
+                # Get rating
+                rating_elem = div.find('span', class_='a-icon-alt')
+                rating = 0
+                if rating_elem:
+                    rating_text = rating_elem.get_text()
+                    rating_match = re.search(r'([\d.]+)', rating_text)
+                    if rating_match:
+                        rating = float(rating_match.group(1))
+                
+                # Get reviews count
+                reviews_elem = div.find('span', {'class': 'a-size-base', 'dir': 'auto'})
+                reviews = 0
+                if reviews_elem:
+                    reviews_text = reviews_elem.get_text()
+                    reviews_match = re.search(r'([\d,]+)', reviews_text)
+                    if reviews_match:
+                        reviews = int(reviews_match.group(1).replace(',', ''))
+                
+                products.append({
+                    "site": "Amazon",
+                    "title": title,
+                    "price": price,
+                    "price_text": f"₹{int(price):,}",
+                    "link": link,
+                    "rating": rating,
+                    "reviews": reviews
+                })
+                
+                print(f"    ✓ Amazon: {title[:50]}... - ₹{int(price):,}")
+                
+            except Exception as e:
+                print(f"    ✗ Error parsing Amazon product: {e}")
+                continue
+        
+        return products
+        
     except Exception as e:
-        print(f"    ❌ Error: {e}")
-        return None
+        print(f"  ❌ Amazon scraping error: {e}")
+        import traceback
+        traceback.print_exc()
+        return []
+
+
+def scrape_flipkart_products(query):
+    """Scrape Flipkart for products"""
+    print("  🔍 Scraping Flipkart...")
+    
+    try:
+        # Flipkart search URL
+        search_url = f"https://www.flipkart.com/search?q={quote_plus(query)}"
+        
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
+        }
+        
+        response = requests.get(search_url, headers=headers, timeout=20)
+        
+        if response.status_code != 200:
+            print(f"  ❌ Flipkart returned status {response.status_code}")
+            return []
+        
+        soup = BeautifulSoup(response.content, 'html.parser')
+        products = []
+        
+        # Find product cards - Flipkart uses these classes
+        product_divs = soup.find_all('div', class_='_1AtVbE')
+        if not product_divs:
+            # Try alternate class
+            product_divs = soup.find_all('div', class_='_4ddWXP')
+        
+        print(f"  ✅ Found {len(product_divs)} Flipkart products")
+        
+        for div in product_divs[:10]:
+            try:
+                # Get title
+                title_elem = div.find('a', class_='IRpwTa') or div.find('div', class_='_4rR01T')
+                if not title_elem:
+                    continue
+                
+                title = title_elem.get_text().strip()
+                
+                if not title or len(title) < 5:
+                    continue
+                
+                # Get price
+                price_elem = div.find('div', class_='_30jeq3')
+                if not price_elem:
+                    continue
+                
+                price_text = price_elem.get_text().strip()
+                price = extract_price(price_text)
+                
+                if price == float('inf') or price == 0:
+                    continue
+                
+                # Get DIRECT product link
+                link_elem = div.find('a', class_='_1fQZEK') or div.find('a', class_='IRpwTa')
+                if not link_elem or not link_elem.get('href'):
+                    continue
+                
+                link = link_elem['href']
+                
+                # Make it a full URL
+                if link.startswith('/'):
+                    link = f"https://www.flipkart.com{link}"
+                elif not link.startswith('http'):
+                    link = f"https://www.flipkart.com/{link}"
+                
+                # Get rating
+                rating_elem = div.find('div', class_='_3LWZlK')
+                rating = 0
+                if rating_elem:
+                    rating_text = rating_elem.get_text()
+                    rating_match = re.search(r'([\d.]+)', rating_text)
+                    if rating_match:
+                        rating = float(rating_match.group(1))
+                
+                # Get reviews count
+                reviews_elem = div.find('span', class_='_2_R_DZ')
+                reviews = 0
+                if reviews_elem:
+                    reviews_text = reviews_elem.get_text()
+                    reviews_match = re.search(r'([\d,]+)', reviews_text)
+                    if reviews_match:
+                        reviews = int(reviews_match.group(1).replace(',', ''))
+                
+                products.append({
+                    "site": "Flipkart",
+                    "title": title,
+                    "price": price,
+                    "price_text": f"₹{int(price):,}",
+                    "link": link,
+                    "rating": rating,
+                    "reviews": reviews
+                })
+                
+                print(f"    ✓ Flipkart: {title[:50]}... - ₹{int(price):,}")
+                
+            except Exception as e:
+                print(f"    ✗ Error parsing Flipkart product: {e}")
+                continue
+        
+        return products
+        
+    except Exception as e:
+        print(f"  ❌ Flipkart scraping error: {e}")
+        import traceback
+        traceback.print_exc()
+        return []
 
 
 def shopping_assistant_task(query, user_profile=None):
-    """AI Shopping Assistant using SerpAPI Google Shopping"""
-    print("🛒 AI Shopping Assistant Starting (SerpAPI)...")
+    """AI Shopping Assistant using Web Scraping"""
+    print("🛒 AI Shopping Assistant Starting (Web Scraper)...")
     print(f"Query: {query}")
     
-    # Clean the query - keep price ranges
+    # Clean the query
     product_query = query.lower()
-    # Remove action words but keep product and price info
     product_query = re.sub(r'\b(find|search|buy|order|get|purchase|best|top)\b', '', product_query).strip()
     product_query = re.sub(r'\s+', ' ', product_query)
     
-    # If query has "under" price, convert to better format for shopping
-    # Example: "laptop under 50000" -> "laptop under 50000 rupees"
-    if 'under' in product_query and not any(word in product_query for word in ['rupees', 'rs', '₹', 'inr']):
-        product_query = product_query + " rupees"
-    
     print(f"Cleaned query: {product_query}")
     
-    # Get API key from environment
-    api_key = os.environ.get('SERPAPI_KEY', '').strip()
-    if not api_key:
-        print("❌ ERROR: SERPAPI_KEY not found in environment variables!")
-        return {"status": "error", "message": "SerpAPI key not configured"}
-    
-    print(f"✅ SerpAPI Key loaded")
-    
     try:
-        # SerpAPI Google Shopping endpoint
-        url = "https://serpapi.com/search"
+        all_products = []
         
-        params = {
-            "engine": "google_shopping",
-            "q": product_query,
-            "api_key": api_key,
-            "location": "Delhi, India",  # More specific location
-            "hl": "en",
-            "gl": "in",
-            "num": "30",  # Get more results
-            "no_cache": "true"  # Don't use cached results
-        }
+        # Scrape Amazon
+        amazon_products = scrape_amazon_products(product_query)
+        all_products.extend(amazon_products)
         
-        print(f"📡 Calling SerpAPI Google Shopping with query: '{product_query}'...")
-        response = requests.get(url, params=params, timeout=30)
+        # Scrape Flipkart
+        flipkart_products = scrape_flipkart_products(product_query)
+        all_products.extend(flipkart_products)
         
-        print(f"Response Status: {response.status_code}")
-        
-        if response.status_code == 401:
-            print("❌ 401 Error - Invalid API key")
-            return {"status": "error", "message": "SerpAPI key is invalid"}
-        
-        if response.status_code == 403:
-            print("❌ 403 Error - API limit exceeded or account inactive")
-            return {"status": "error", "message": "SerpAPI limit exceeded or account inactive"}
-        
-        if response.status_code != 200:
-            print(f"❌ API Error: Status {response.status_code}")
-            print(f"Response: {response.text[:500]}")
-            return {"status": "error", "message": f"API error: {response.status_code}"}
-        
-        data = response.json()
-        print(f"✅ SerpAPI Response received")
-        
-        # Parse results
-        products = []
-        
-        # SerpAPI returns results in 'shopping_results' field
-        if 'shopping_results' in data and len(data['shopping_results']) > 0:
-            print(f"Found {len(data['shopping_results'])} products from Google Shopping")
-            
-            # DEBUG: Print first item structure to see actual fields
-            print("\n🔍 DEBUG - First item structure:")
-            first_item = data['shopping_results'][0]
-            print(f"Available fields: {list(first_item.keys())}")
-            # Check if offers exist
-            if 'offers' in first_item:
-                print(f"✅ Offers found: {first_item['offers']}")
-            else:
-                print(f"⚠️ No 'offers' field in response")
-            print("=" * 80)
-            
-            for idx, item in enumerate(data['shopping_results'][:20]):
-                try:
-                    # Extract product details
-                    title = item.get('title', '')
-                    if not title or len(title) < 5:
-                        print(f"  ✗ Item {idx+1}: No title")
-                        continue
-                    
-                    # Get price - SerpAPI provides clean price data
-                    # Try multiple price fields
-                    price = None
-                    
-                    # Method 1: Direct extracted_price (most reliable)
-                    if 'extracted_price' in item and item['extracted_price']:
-                        price = float(item['extracted_price'])
-                    
-                    # Method 2: Price field
-                    elif 'price' in item and item['price']:
-                        price_text = item['price']
-                        price = extract_price(price_text)
-                    
-                    # Method 3: Check if there's a sale price
-                    elif 'sale_price' in item and item['sale_price']:
-                        price_text = item['sale_price']
-                        price = extract_price(price_text)
-                    
-                    if not price or price == float('inf') or price == 0:
-                        print(f"  ✗ Item {idx+1}: No valid price (title: {title[:30]}...)")
-                        continue
-                    
-                    # Get source/merchant
-                    source = item.get('source', 'Online Store')
-                    
-                    # Detect major retailers
-                    if 'amazon' in source.lower():
-                        source = "Amazon"
-                    elif 'flipkart' in source.lower():
-                        source = "Flipkart"
-                    elif 'myntra' in source.lower():
-                        source = "Myntra"
-                    elif 'croma' in source.lower():
-                        source = "Croma"
-                    elif 'reliance' in source.lower():
-                        source = "Reliance Digital"
-                    
-                    # Get product link - Try multiple methods
-                    link = None
-                    direct_link_attempted = False
-                    
-                    # Method 1: Try to get direct link via immersive product API
-                    if 'serpapi_immersive_product_api' in item:
-                        immersive_url = item['serpapi_immersive_product_api']
-                        print(f"  🔗 Fetching direct link for item {idx+1}...")
-                        direct_link = get_direct_merchant_link(immersive_url, api_key)
-                        if direct_link:
-                            link = direct_link
-                            print(f"  ✅ Got direct merchant link!")
-                            direct_link_attempted = True
-                    
-                    # Method 2: Fallback to product_link (Google Shopping page)
-                    if not link:
-                        link = item.get('product_link', '')
-                        if not direct_link_attempted:
-                            print(f"  ⚠️ Using Google Shopping link (no immersive API)")
-                    
-                    if not link or not link.startswith('http'):
-                        print(f"  ✗ Item {idx+1}: No valid link")
-                        continue
-                    
-                    # Get rating if available
-                    rating = item.get('rating', 0)
-                    reviews = item.get('reviews', 0)
-                    
-                    # Get delivery info if available
-                    delivery = item.get('delivery', 'Standard Delivery')
-                    
-                    products.append({
-                        "site": source,
-                        "title": title,
-                        "price": price,
-                        "price_text": f"₹{int(price):,}",
-                        "link": link,
-                        "rating": rating,
-                        "reviews": reviews,
-                        "delivery": delivery
-                    })
-                    
-                    print(f"  ✓ Item {idx+1}: {title[:50]}... - ₹{int(price):,} ({source})")
-                    
-                except Exception as e:
-                    print(f"  ✗ Error parsing item {idx+1}: {e}")
-                    import traceback
-                    traceback.print_exc()
-                    continue
-        
-        # Also check 'inline_shopping_results' if shopping_results is empty
-        elif 'inline_shopping_results' in data and len(data['inline_shopping_results']) > 0:
-            print(f"Found {len(data['inline_shopping_results'])} inline products")
-            
-            for idx, item in enumerate(data['inline_shopping_results'][:20]):
-                try:
-                    title = item.get('title', '')
-                    if not title or len(title) < 5:
-                        continue
-                    
-                    price_text = item.get('extracted_price') or item.get('price')
-                    if not price_text:
-                        continue
-                    
-                    if isinstance(price_text, (int, float)):
-                        price = float(price_text)
-                    else:
-                        price = extract_price(price_text)
-                    
-                    if price == float('inf') or price == 0:
-                        continue
-                    
-                    source = item.get('source', 'Online Store')
-                    link = item.get('link', '')
-                    
-                    if not link or not link.startswith('http'):
-                        continue
-                    
-                    products.append({
-                        "site": source,
-                        "title": title,
-                        "price": price,
-                        "price_text": f"₹{int(price):,}",
-                        "link": link,
-                        "rating": item.get('rating', 0),
-                        "reviews": item.get('reviews', 0)
-                    })
-                    
-                    print(f"  ✓ Item {idx+1}: {title[:50]}... - ₹{int(price):,} ({source})")
-                    
-                except Exception as e:
-                    print(f"  ✗ Error parsing item {idx+1}: {e}")
-                    continue
-        
-        if not products:
-            print("⚠️ No products found in API response")
-            available_keys = list(data.keys())
-            print(f"Available keys in response: {available_keys}")
-            
-            # Print first few items from response for debugging
-            if 'shopping_results' in data:
-                print(f"shopping_results exists but empty or unparseable")
-            if 'inline_shopping_results' in data:
-                print(f"inline_shopping_results exists but empty or unparseable")
-            
-            # Try to provide helpful message
+        if not all_products:
+            print("⚠️ No products found on Amazon or Flipkart")
             return {
                 "status": "error", 
-                "message": f"No products found for '{product_query}'. Try searching for just the product name (e.g., 'laptop' or 'gaming laptop')",
-                "suggestion": "Try simpler search terms like: 'laptop', 'iPhone', 'headphones', etc."
+                "message": f"No products found for '{product_query}'. Try a different search term.",
+                "suggestion": "Try simpler terms like 'laptop', 'iPhone', 'headphones'"
             }
         
         # Sort by price - cheapest first
-        products.sort(key=lambda x: x['price'])
+        all_products.sort(key=lambda x: x['price'])
         
-        print(f"\n✅ Found {len(products)} valid products")
-        print(f"🎯 BEST DEAL: {products[0]['title'][:50]}... - {products[0]['price_text']} ({products[0]['site']})")
+        print(f"\n✅ Found {len(all_products)} total products")
+        print(f"🎯 BEST DEAL: {all_products[0]['title'][:50]}... - {all_products[0]['price_text']} ({all_products[0]['site']})")
         
-        # Create summary message
+        # Create summary
         top_3_summary = "\n".join([
             f"{i+1}. {p['title'][:60]} - {p['price_text']} ({p['site']})"
-            for i, p in enumerate(products[:3])
+            for i, p in enumerate(all_products[:3])
         ])
         
         return {
             "status": "success",
-            "best_deal": products[0],
-            "top_products": products[:5],
-            "total_products": len(products),
-            "message": f"🎉 Found {len(products)} products!\n\n🏆 TOP 3 DEALS:\n{top_3_summary}",
+            "best_deal": all_products[0],
+            "top_products": all_products[:5],
+            "total_products": len(all_products),
+            "message": f"🎉 Found {len(all_products)} products!\n\n🏆 TOP 3 DEALS:\n{top_3_summary}",
             "query": product_query
         }
         
-    except requests.exceptions.Timeout:
-        print("❌ API request timed out")
-        return {"status": "error", "message": "Request timed out"}
-    
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Network error: {e}")
-        return {"status": "error", "message": f"Network error: {str(e)}"}
-    
     except Exception as e:
         print(f"❌ Error: {e}")
         import traceback
