@@ -2,7 +2,7 @@ import requests
 import os
 import re
 from bs4 import BeautifulSoup
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlencode
 
 
 def extract_price(price_text):
@@ -19,30 +19,47 @@ def extract_price(price_text):
         return float('inf')
 
 
-def scrape_amazon_products(query):
-    """Scrape Amazon India for products"""
+def scrape_with_scraperapi(url, api_key):
+    """Use ScraperAPI to bypass anti-bot protection"""
+    try:
+        # ScraperAPI endpoint
+        scraperapi_url = 'http://api.scraperapi.com'
+        
+        params = {
+            'api_key': api_key,
+            'url': url,
+            'country_code': 'in'  # India
+        }
+        
+        response = requests.get(scraperapi_url, params=params, timeout=60)
+        
+        if response.status_code == 200:
+            return response.text
+        else:
+            print(f"    ❌ ScraperAPI returned status {response.status_code}")
+            return None
+            
+    except Exception as e:
+        print(f"    ❌ ScraperAPI error: {e}")
+        return None
+
+
+def scrape_amazon_products(query, scraperapi_key):
+    """Scrape Amazon India for products using ScraperAPI"""
     print("  🔍 Scraping Amazon India...")
     
     try:
         # Amazon search URL
         search_url = f"https://www.amazon.in/s?k={quote_plus(query)}"
         
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1'
-        }
+        print(f"    📡 Using ScraperAPI to fetch Amazon...")
+        html_content = scrape_with_scraperapi(search_url, scraperapi_key)
         
-        response = requests.get(search_url, headers=headers, timeout=20)
-        
-        if response.status_code != 200:
-            print(f"  ❌ Amazon returned status {response.status_code}")
+        if not html_content:
+            print(f"  ❌ Failed to get Amazon page")
             return []
         
-        soup = BeautifulSoup(response.content, 'html.parser')
+        soup = BeautifulSoup(html_content, 'html.parser')
         products = []
         
         # Find product cards - Amazon uses these classes
@@ -131,30 +148,22 @@ def scrape_amazon_products(query):
         return []
 
 
-def scrape_flipkart_products(query):
-    """Scrape Flipkart for products"""
+def scrape_flipkart_products(query, scraperapi_key):
+    """Scrape Flipkart for products using ScraperAPI"""
     print("  🔍 Scraping Flipkart...")
     
     try:
         # Flipkart search URL
         search_url = f"https://www.flipkart.com/search?q={quote_plus(query)}"
         
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1'
-        }
+        print(f"    📡 Using ScraperAPI to fetch Flipkart...")
+        html_content = scrape_with_scraperapi(search_url, scraperapi_key)
         
-        response = requests.get(search_url, headers=headers, timeout=20)
-        
-        if response.status_code != 200:
-            print(f"  ❌ Flipkart returned status {response.status_code}")
+        if not html_content:
+            print(f"  ❌ Failed to get Flipkart page")
             return []
         
-        soup = BeautifulSoup(response.content, 'html.parser')
+        soup = BeautifulSoup(html_content, 'html.parser')
         products = []
         
         # Find product cards - Flipkart uses these classes
@@ -245,8 +254,8 @@ def scrape_flipkart_products(query):
 
 
 def shopping_assistant_task(query, user_profile=None):
-    """AI Shopping Assistant using Web Scraping"""
-    print("🛒 AI Shopping Assistant Starting (Web Scraper)...")
+    """AI Shopping Assistant using ScraperAPI"""
+    print("🛒 AI Shopping Assistant Starting (ScraperAPI)...")
     print(f"Query: {query}")
     
     # Clean the query
@@ -256,15 +265,23 @@ def shopping_assistant_task(query, user_profile=None):
     
     print(f"Cleaned query: {product_query}")
     
+    # Get ScraperAPI key
+    scraperapi_key = os.environ.get('SCRAPERAPI_KEY', '').strip()
+    if not scraperapi_key:
+        print("❌ ERROR: SCRAPERAPI_KEY not found in environment variables!")
+        return {"status": "error", "message": "ScraperAPI key not configured"}
+    
+    print(f"✅ ScraperAPI Key loaded")
+    
     try:
         all_products = []
         
         # Scrape Amazon
-        amazon_products = scrape_amazon_products(product_query)
+        amazon_products = scrape_amazon_products(product_query, scraperapi_key)
         all_products.extend(amazon_products)
         
         # Scrape Flipkart
-        flipkart_products = scrape_flipkart_products(product_query)
+        flipkart_products = scrape_flipkart_products(product_query, scraperapi_key)
         all_products.extend(flipkart_products)
         
         if not all_products:
