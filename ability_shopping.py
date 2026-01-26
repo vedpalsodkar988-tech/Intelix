@@ -74,27 +74,32 @@ def scrape_amazon_products(query, scraperapi_key):
                 if not title_elem:
                     title_elem = div.find('span', class_='a-size-medium')
                 if not title_elem:
+                    print(f"    ✗ Product: No title found")
                     continue
                 
                 title = title_elem.get_text().strip()
                 
                 if not title or len(title) < 5:
+                    print(f"    ✗ Product: Title too short: {title}")
                     continue
                 
                 # Get price
                 price_elem = div.find('span', class_='a-price-whole')
                 if not price_elem:
+                    print(f"    ✗ Product {title[:30]}: No price found")
                     continue
                 
                 price_text = price_elem.get_text().strip()
                 price = extract_price(price_text)
                 
                 if price == float('inf') or price == 0:
+                    print(f"    ✗ Product {title[:30]}: Invalid price: {price_text}")
                     continue
                 
                 # Get DIRECT product link
                 link_elem = div.find('a', class_='a-link-normal')
                 if not link_elem or not link_elem.get('href'):
+                    print(f"    ✗ Product {title[:30]}: No link found")
                     continue
                 
                 link = link_elem['href']
