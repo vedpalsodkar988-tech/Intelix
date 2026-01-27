@@ -207,6 +207,16 @@ def scrape_flipkart_products(query, scraperapi_key):
         
         print(f"  ✅ Found {len(product_divs)} Flipkart products")
         
+        # DEBUG: Print first product HTML to see structure
+        if product_divs and len(product_divs) > 0:
+            print(f"  🔍 DEBUG - First product classes: {product_divs[0].get('class')}")
+            # Find all 'a' tags in first product
+            links = product_divs[0].find_all('a', limit=3)
+            if links:
+                print(f"  🔍 DEBUG - Found {len(links)} links in first product")
+                for i, link in enumerate(links[:2]):
+                    print(f"    Link {i+1} text: {link.get_text()[:50] if link.get_text() else 'NO TEXT'}")
+        
         for div in product_divs[:10]:
             try:
                 # Get title - Try multiple selectors
@@ -379,3 +389,4 @@ def shopping_assistant_task(query, user_profile=None):
         import traceback
         traceback.print_exc()
         return {"status": "error", "error": str(e)}
+
