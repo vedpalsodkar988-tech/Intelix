@@ -219,7 +219,11 @@ def scrape_flipkart_products(query, scraperapi_key):
         
         for div in product_divs[:10]:
             try:
-                # Get title - Try multiple selectors
+                # Get title - Flipkart stores title in <a> tags, find ANY <a> with text
+                title = None
+                title_elem = None
+                
+                # Method 1: Try specific classes first
                 title_elem = (
                     div.find('a', class_='IRpwTa') or
                     div.find('div', class_='_4rR01T') or
@@ -228,8 +232,18 @@ def scrape_flipkart_products(query, scraperapi_key):
                     div.find('div', class_='_2WkVRV')
                 )
                 
+                # Method 2: If no title from classes, find ANY <a> tag with substantial text
+                if not title_elem or not title_elem.get_text().strip():
+                    all_links = div.find_all('a', limit=5)
+                    for link in all_links:
+                        text = link.get_text().strip()
+                        # Title should be at least 10 chars and not be empty
+                        if text and len(text) > 10 and not text.startswith('₹'):
+                            title_elem = link
+                            break
+                
                 if not title_elem:
-                    print(f"    ✗ Product: No title found")
+                    print(f"    ✗ Product: No title found (tried all methods)")
                     continue
                 
                 title = title_elem.get_text().strip()
@@ -369,7 +383,7 @@ def shopping_assistant_task(query, user_profile=None):
         print(f"\n✅ Found {len(all_products)} total products")
         print(f"🎯 BEST DEAL: {all_products[0]['title'][:50]}... - {all_products[0]['price_text']} ({all_products[0]['site']})")
         
-        # Create summary - TOP 5 not TOP 3!
+        # Create summary - CHANGED FROM TOP 3 TO TOP 5!
         top_5_summary = "\n".join([
             f"{i+1}. {p['title'][:60]} - {p['price_text']} ({p['site']})"
             for i, p in enumerate(all_products[:5])
@@ -380,7 +394,7 @@ def shopping_assistant_task(query, user_profile=None):
             "best_deal": all_products[0],
             "top_products": all_products[:5],
             "total_products": len(all_products),
-            "message": f"🎉 Found {len(all_products)} products!\n\n🏆 TOP 5 DEALS:\n{top_5_summary}",
+            "message": f"🎉 Found {len(all_products)} products!\n\n🏆 TOP 5 BEST DEALS:\n{top_5_summary}",
             "query": product_query
         }
         
@@ -389,4 +403,3 @@ def shopping_assistant_task(query, user_profile=None):
         import traceback
         traceback.print_exc()
         return {"status": "error", "error": str(e)}
-
