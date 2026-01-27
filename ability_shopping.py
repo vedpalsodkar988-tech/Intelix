@@ -69,12 +69,24 @@ def scrape_amazon_products(query, scraperapi_key):
         
         for div in product_divs[:10]:
             try:
-                # Get title
-                title_elem = div.find('h2', class_='a-size-mini')
+                # Get title - Try multiple selectors
+                title_elem = (
+                    div.find('h2', class_='a-size-mini') or
+                    div.find('span', class_='a-size-medium') or
+                    div.find('h2', class_='a-size-base-plus') or
+                    div.find('span', class_='a-size-base-plus') or
+                    div.find('h2') or  # Any h2
+                    div.find('span', class_='a-text-normal')
+                )
+                
                 if not title_elem:
-                    title_elem = div.find('span', class_='a-size-medium')
+                    # Try finding by data-component-type
+                    title_link = div.find('a', {'class': 's-underline-text'})
+                    if title_link:
+                        title_elem = title_link.find('span')
+                
                 if not title_elem:
-                    print(f"    ✗ Product: No title found")
+                    print(f"    ✗ Product: No title found (tried all selectors)")
                     continue
                 
                 title = title_elem.get_text().strip()
@@ -83,8 +95,14 @@ def scrape_amazon_products(query, scraperapi_key):
                     print(f"    ✗ Product: Title too short: {title}")
                     continue
                 
-                # Get price
-                price_elem = div.find('span', class_='a-price-whole')
+                print(f"    🔍 Found title: {title[:40]}...")
+                
+                # Get price - Try multiple selectors
+                price_elem = (
+                    div.find('span', class_='a-price-whole') or
+                    div.find('span', class_='a-offscreen')
+                )
+                
                 if not price_elem:
                     print(f"    ✗ Product {title[:30]}: No price found")
                     continue
@@ -96,8 +114,15 @@ def scrape_amazon_products(query, scraperapi_key):
                     print(f"    ✗ Product {title[:30]}: Invalid price: {price_text}")
                     continue
                 
-                # Get DIRECT product link
-                link_elem = div.find('a', class_='a-link-normal')
+                print(f"    💰 Found price: ₹{int(price):,}")
+                
+                # Get DIRECT product link - Try multiple methods
+                link_elem = (
+                    div.find('a', class_='a-link-normal') or
+                    div.find('a', {'class': 's-underline-text'}) or
+                    div.find('a', href=True)
+                )
+                
                 if not link_elem or not link_elem.get('href'):
                     print(f"    ✗ Product {title[:30]}: No link found")
                     continue
