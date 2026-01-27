@@ -196,40 +196,71 @@ def scrape_flipkart_products(query, scraperapi_key):
         soup = BeautifulSoup(html_content, 'html.parser')
         products = []
         
-        # Find product cards - Flipkart uses these classes
-        product_divs = soup.find_all('div', class_='_1AtVbE')
-        if not product_divs:
-            # Try alternate class
-            product_divs = soup.find_all('div', class_='_4ddWXP')
+        # Find product cards - Flipkart uses multiple possible classes
+        product_divs = (
+            soup.find_all('div', class_='_1AtVbE') or
+            soup.find_all('div', class_='_4ddWXP') or
+            soup.find_all('div', class_='_2kHMtA') or
+            soup.find_all('div', class_='_13oc-S') or
+            soup.find_all('div', {'data-id': True})  # Products have data-id attribute
+        )
         
         print(f"  ✅ Found {len(product_divs)} Flipkart products")
         
         for div in product_divs[:10]:
             try:
-                # Get title
-                title_elem = div.find('a', class_='IRpwTa') or div.find('div', class_='_4rR01T')
+                # Get title - Try multiple selectors
+                title_elem = (
+                    div.find('a', class_='IRpwTa') or
+                    div.find('div', class_='_4rR01T') or
+                    div.find('a', class_='s1Q9rs') or
+                    div.find('a', class_='_2rpwqI') or
+                    div.find('div', class_='_2WkVRV')
+                )
+                
                 if not title_elem:
+                    print(f"    ✗ Product: No title found")
                     continue
                 
                 title = title_elem.get_text().strip()
                 
                 if not title or len(title) < 5:
+                    print(f"    ✗ Product: Title too short: {title}")
                     continue
                 
-                # Get price
-                price_elem = div.find('div', class_='_30jeq3')
+                print(f"    🔍 Found title: {title[:40]}...")
+                
+                # Get price - Try multiple selectors
+                price_elem = (
+                    div.find('div', class_='_30jeq3') or
+                    div.find('div', class_='_25b18c') or
+                    div.find('div', class_='_1_WHN1')
+                )
+                
                 if not price_elem:
+                    print(f"    ✗ Product {title[:30]}: No price found")
                     continue
                 
                 price_text = price_elem.get_text().strip()
                 price = extract_price(price_text)
                 
                 if price == float('inf') or price == 0:
+                    print(f"    ✗ Product {title[:30]}: Invalid price: {price_text}")
                     continue
                 
-                # Get DIRECT product link
-                link_elem = div.find('a', class_='_1fQZEK') or div.find('a', class_='IRpwTa')
+                print(f"    💰 Found price: ₹{int(price):,}")
+                
+                # Get DIRECT product link - Try multiple methods
+                link_elem = (
+                    div.find('a', class_='_1fQZEK') or
+                    div.find('a', class_='IRpwTa') or
+                    div.find('a', class_='s1Q9rs') or
+                    div.find('a', class_='_2rpwqI') or
+                    div.find('a', href=True)
+                )
+                
                 if not link_elem or not link_elem.get('href'):
+                    print(f"    ✗ Product {title[:30]}: No link found")
                     continue
                 
                 link = link_elem['href']
@@ -328,10 +359,10 @@ def shopping_assistant_task(query, user_profile=None):
         print(f"\n✅ Found {len(all_products)} total products")
         print(f"🎯 BEST DEAL: {all_products[0]['title'][:50]}... - {all_products[0]['price_text']} ({all_products[0]['site']})")
         
-        # Create summary
-        top_3_summary = "\n".join([
+        # Create summary - TOP 5 not TOP 3!
+        top_5_summary = "\n".join([
             f"{i+1}. {p['title'][:60]} - {p['price_text']} ({p['site']})"
-            for i, p in enumerate(all_products[:3])
+            for i, p in enumerate(all_products[:5])
         ])
         
         return {
@@ -339,7 +370,7 @@ def shopping_assistant_task(query, user_profile=None):
             "best_deal": all_products[0],
             "top_products": all_products[:5],
             "total_products": len(all_products),
-            "message": f"🎉 Found {len(all_products)} products!\n\n🏆 TOP 3 DEALS:\n{top_3_summary}",
+            "message": f"🎉 Found {len(all_products)} products!\n\n🏆 TOP 5 DEALS:\n{top_5_summary}",
             "query": product_query
         }
         
