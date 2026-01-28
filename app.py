@@ -107,42 +107,18 @@ def init_db():
 
 init_db()
 
-# Abilities configuration
+# Abilities configuration - UPDATED
 ABILITIES = [
     {
         "id": 1,
-        "name": "Form Filling",
-        "description": "Automatically fill web forms with your data",
-        "functions": ["Detect form fields", "Auto-fill data", "Universal compatibility"],
-        "rating": 5,
-        "status": "active"
-    },
-    {
-        "id": 2,
-        "name": "Deep Research",
-        "description": "Conduct comprehensive web research on any topic",
-        "functions": ["Search multiple sources", "Compile findings", "Generate reports"],
+        "name": "AI Shopping Assistant",
+        "description": "Find best deals across Amazon, Flipkart, Blinkit",
+        "functions": ["Compare prices", "Find best deals", "Add to cart"],
         "rating": 4,
         "status": "active"
     },
     {
-        "id": 3,
-        "name": "Smart Browser",
-        "description": "Intelligent browser automation and navigation",
-        "functions": ["Open websites", "Navigate pages", "Smart scrolling"],
-        "rating": 5,
-        "status": "active"
-    },
-    {
-        "id": 4,
-        "name": "AI Shopping Assistant",
-        "description": "Find best deals across Amazon, Flipkart, Blinkit",
-        "functions": ["Compare prices", "Find best deals", "Add to cart"],
-        "rating": 5,
-        "status": "active"
-    },
-    {
-        "id": 5,
+        "id": 2,
         "name": "AI Job Finder",
         "description": "Search jobs across multiple platforms based on your profile",
         "functions": ["Search multiple job portals", "Match based on profile", "Filter by salary & experience"],
@@ -150,7 +126,7 @@ ABILITIES = [
         "status": "active"
     },
     {
-        "id": 6,
+        "id": 3,
         "name": "AI Career Agent",
         "description": "Find internships on Internshala perfect for students",
         "functions": ["Search Internshala", "Filter by role & location", "Show TOP 3 matches"],
@@ -158,12 +134,21 @@ ABILITIES = [
         "status": "active"
     },
     {
-        "id": 7,
+        "id": 4,
         "name": "Auto Email Reply",
         "description": "Smart automated email responses",
         "functions": ["Read emails", "Generate replies", "Send responses"],
         "rating": 4,
         "status": "coming_soon"
+    },
+    {
+        "id": 5,
+        "name": "AI Auto-Job Applier",
+        "description": "Select jobs and auto-apply to multiple positions instantly",
+        "functions": ["Select jobs to apply", "Auto-fill applications", "Submit to multiple portals"],
+        "rating": 5,
+        "status": "coming_soon",
+        "badge": "pro_plan"
     }
 ]
 
