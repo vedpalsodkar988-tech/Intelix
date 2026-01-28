@@ -52,18 +52,23 @@
                 <div class="ability-card">
                     <div class="card-header">
                         <div class="ability-number">{{ ability.id }}</div>
-                        {% if ability.status == 'active' %}
-                        <div class="ability-badge badge-active">Active</div>
-                        {% else %}
-                        <div class="ability-badge badge-coming-soon">Coming Soon</div>
-                        {% endif %}
+                        <div class="badges-container">
+                            {% if ability.status == 'active' %}
+                            <div class="ability-badge badge-active">ACTIVE</div>
+                            {% else %}
+                            <div class="ability-badge badge-coming-soon">COMING SOON</div>
+                            {% endif %}
+                            {% if ability.get('badge') == 'pro_plan' %}
+                            <div class="ability-badge badge-pro-plan">PRO PLAN</div>
+                            {% endif %}
+                        </div>
                     </div>
                     
                     <h2 class="ability-name">{{ ability.name }}</h2>
                     <p class="ability-description">{{ ability.description }}</p>
                     
                     <div class="ability-functions">
-                        <h3>Top Functions:</h3>
+                        <h3>TOP FUNCTIONS:</h3>
                         <ul>
                             {% for func in ability.functions %}
                             <li>{{ func }}</li>
