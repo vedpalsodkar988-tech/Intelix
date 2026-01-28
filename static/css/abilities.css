@@ -85,6 +85,14 @@
     box-shadow: 0 5px 15px rgba(59, 130, 246, 0.4);
 }
 
+/* Badges Container */
+.badges-container {
+    display: flex;
+    gap: 8px;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
 .ability-badge {
     padding: 6px 14px;
     border-radius: 20px;
@@ -103,6 +111,22 @@
     background: rgba(251, 146, 60, 0.2);
     border: 1px solid #fb923c;
     color: #fb923c;
+}
+
+.badge-pro-plan {
+    background: rgba(168, 85, 247, 0.2);
+    border: 1px solid #a855f7;
+    color: #a855f7;
+    animation: proPulse 2s ease-in-out infinite;
+}
+
+@keyframes proPulse {
+    0%, 100% {
+        box-shadow: 0 0 5px rgba(168, 85, 247, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 15px rgba(168, 85, 247, 0.6);
+    }
 }
 
 /* Card Content */
@@ -270,5 +294,9 @@
     
     .ability-card {
         padding: 20px;
+    }
+    
+    .badges-container {
+        flex-direction: row;
     }
 }
