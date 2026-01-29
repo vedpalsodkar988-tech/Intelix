@@ -89,9 +89,15 @@
                         <span class="rating-score">{{ ability.rating }}/5</span>
                     </div>
                     
+                    {% if ability.status == 'active' %}
                     <button class="use-ability-btn" onclick="useAbility('{{ ability.name }}')">
                         Use This Ability
                     </button>
+                    {% else %}
+                    <button class="use-ability-btn coming-soon-btn" disabled>
+                        Coming Soon
+                    </button>
+                    {% endif %}
                 </div>
                 {% endfor %}
             </div>
