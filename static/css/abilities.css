@@ -275,6 +275,23 @@
     transform: scale(0.98);
 }
 
+/* Coming Soon Button - Disabled State */
+.use-ability-btn.coming-soon-btn {
+    background: rgba(139, 146, 176, 0.1);
+    border: 2px solid rgba(139, 146, 176, 0.3);
+    color: #8b92b0;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.use-ability-btn.coming-soon-btn:hover {
+    background: rgba(139, 146, 176, 0.1);
+    border: 2px solid rgba(139, 146, 176, 0.3);
+    color: #8b92b0;
+    transform: none;
+    box-shadow: none;
+}
+
 /* Responsive - adjust for smaller screens */
 @media (max-width: 1400px) {
     .abilities-grid {
