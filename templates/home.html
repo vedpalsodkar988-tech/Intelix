@@ -3,345 +3,693 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Intelix - Home</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
+    <title>Intelix - AI Agent Platform</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #60A5FA;
+            --secondary: #A78BFA;
+            --accent: #34D399;
+            --dark: #0F172A;
+            --darker: #020617;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: var(--darker);
+            color: #E2E8F0;
+            overflow-x: hidden;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        /* Animated Neural Network Canvas */
+        #neuralCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.4;
+        }
+
+        /* Container */
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 260px;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(96, 165, 250, 0.2);
+            padding: 30px 0;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 0 30px 30px;
+            border-bottom: 1px solid rgba(96, 165, 250, 0.2);
+        }
+
+        .sidebar-header h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 2px;
+        }
+
+        .sidebar-nav {
+            padding: 30px 0;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px 30px;
+            color: #94A3B8;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-size: 16px;
+            font-weight: 500;
+            position: relative;
+        }
+
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 3px;
+            background: linear-gradient(180deg, var(--primary), var(--secondary));
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            color: #E2E8F0;
+            background: rgba(96, 165, 250, 0.1);
+        }
+
+        .nav-item:hover::before,
+        .nav-item.active::before {
+            transform: scaleY(1);
+        }
+
+        .nav-icon {
+            font-size: 20px;
+        }
+
+        .sidebar-footer {
+            position: absolute;
+            bottom: 30px;
+            width: 100%;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 260px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 40px;
+        }
+
+        /* 3D AI Orb Container */
+        .ai-orb-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin-bottom: 40px;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0) rotate(0deg);
+            }
+            50% {
+                transform: translateY(-20px) rotate(180deg);
+            }
+        }
+
+        .ai-orb {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 50%, var(--accent) 100%);
+            box-shadow: 
+                0 0 60px rgba(96, 165, 250, 0.6),
+                0 0 100px rgba(167, 139, 250, 0.4),
+                inset 0 0 60px rgba(255, 255, 255, 0.1);
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 
+                    0 0 60px rgba(96, 165, 250, 0.6),
+                    0 0 100px rgba(167, 139, 250, 0.4),
+                    inset 0 0 60px rgba(255, 255, 255, 0.1);
+            }
+            50% {
+                box-shadow: 
+                    0 0 80px rgba(96, 165, 250, 0.8),
+                    0 0 120px rgba(167, 139, 250, 0.6),
+                    inset 0 0 80px rgba(255, 255, 255, 0.2);
+            }
+        }
+
+        .ai-orb::before {
+            content: '';
+            position: absolute;
+            top: 20%;
+            left: 20%;
+            width: 40%;
+            height: 40%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.8) 0%, transparent 70%);
+            border-radius: 50%;
+            filter: blur(10px);
+        }
+
+        .orb-ring {
+            position: absolute;
+            top: -15px;
+            left: -15px;
+            right: -15px;
+            bottom: -15px;
+            border: 2px solid rgba(96, 165, 250, 0.3);
+            border-radius: 50%;
+            animation: rotate 20s linear infinite;
+        }
+
+        .orb-ring::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 8px;
+            height: 8px;
+            background: var(--primary);
+            border-radius: 50%;
+            box-shadow: 0 0 20px var(--primary);
+        }
+
+        @keyframes rotate {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Hero Title */
+        .hero-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 52px;
+            font-weight: 900;
+            text-align: center;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #60A5FA 0%, #A78BFA 50%, #34D399 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-size: 200% auto;
+            animation: shimmer 3s linear infinite;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        @keyframes shimmer {
+            to {
+                background-position: 200% center;
+            }
+        }
+
+        .hero-subtitle {
+            font-size: 18px;
+            color: #94A3B8;
+            text-align: center;
+            margin-bottom: 50px;
+            font-weight: 400;
+        }
+
+        .welcome-text {
+            font-size: 16px;
+            color: var(--primary);
+            text-align: center;
+            margin-bottom: 15px;
+            font-weight: 500;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        /* Glassmorphism Task Container */
+        .task-container {
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .input-wrapper {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .task-input {
+            width: 100%;
+            padding: 25px 60px 25px 25px;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(96, 165, 250, 0.3);
+            border-radius: 16px;
+            color: #E2E8F0;
+            font-size: 18px;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .task-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(15, 23, 42, 0.6);
+            box-shadow: 
+                0 8px 32px rgba(96, 165, 250, 0.3),
+                0 0 40px rgba(96, 165, 250, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .task-input::placeholder {
+            color: #475569;
+        }
+
+        .voice-btn {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(96, 165, 250, 0.3);
+        }
+
+        .voice-btn:hover {
+            transform: translateY(-50%) scale(1.1);
+            box-shadow: 0 6px 25px rgba(96, 165, 250, 0.5);
+        }
+
+        /* Run Task Button */
+        .run-task-btn {
+            width: 100%;
+            padding: 20px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border: none;
+            border-radius: 16px;
+            color: white;
+            font-size: 18px;
+            font-weight: 700;
+            font-family: 'Orbitron', sans-serif;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 
+                0 8px 32px rgba(96, 165, 250, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .run-task-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .run-task-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                0 12px 40px rgba(96, 165, 250, 0.6),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
+
+        .run-task-btn:hover::before {
+            left: 100%;
+        }
+
+        .run-task-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Scan Line Effect */
+        .scanline {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                to bottom,
+                transparent 0%,
+                rgba(96, 165, 250, 0.05) 50%,
+                transparent 100%
+            );
+            pointer-events: none;
+            z-index: 999;
+            animation: scan 8s linear infinite;
+        }
+
+        @keyframes scan {
+            0% {
+                transform: translateY(-100%);
+            }
+            100% {
+                transform: translateY(100%);
+            }
+        }
+
+        /* Footer */
+        .footer {
+            position: fixed;
+            bottom: 0;
+            left: 260px;
+            right: 0;
+            padding: 20px 40px;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(96, 165, 250, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 50;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 30px;
+        }
+
+        .footer-links a {
+            color: #64748B;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: var(--primary);
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .footer {
+                left: 0;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 32px;
+            }
+
+            .ai-orb-container {
+                width: 150px;
+                height: 150px;
+            }
+
+            .task-input {
+                font-size: 16px;
+                padding: 20px 55px 20px 20px;
+            }
+
+            .footer {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <h2>Intelix</h2>
-            </div>
-            <nav class="sidebar-nav">
-                <a href="/home" class="nav-item active">
-                    <span class="nav-icon">🏠</span>
-                    <span>Home</span>
-                </a>
-                <a href="/abilities" class="nav-item">
-                    <span class="nav-icon">⚡</span>
-                    <span>Abilities</span>
-                </a>
-                <a href="/projects" class="nav-item">
-                    <span class="nav-icon">📁</span>
-                    <span>Your Projects</span>
-                </a>
-            </nav>
-            <div class="sidebar-footer">
-                <a href="/profile" class="nav-item">
-                    <span class="nav-icon">👤</span>
-                    <span>Profile</span>
-                </a>
-                <a href="/settings" class="nav-item">
-                    <span class="nav-icon">⚙️</span>
-                    <span>Settings</span>
-                </a>
-            </div>
-        </aside>
+    <!-- Scanline Effect -->
+    <div class="scanline"></div>
 
-        <!-- Main Content -->
-        <main class="main-content">
-            <div class="chat-container">
-                <header class="chat-header">
-                    <h1>An AI system built to execute</h1>
-                    <p>Welcome back, {{ username }}!</p>
-                </header>
+    <!-- Neural Network Canvas -->
+    <canvas id="neuralCanvas"></canvas>
 
-                <div class="task-input-container">
-                    <input type="text" 
-                           id="taskInput" 
-                           placeholder="Enter your task...">
-                    <button class="voice-btn" id="voiceBtn" title="Voice Input">
-                        🎤
-                    </button>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>INTELIX</h2>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="/home" class="nav-item active">
+                <span class="nav-icon">🏠</span>
+                <span>Home</span>
+            </a>
+            <a href="/abilities" class="nav-item">
+                <span class="nav-icon">⚡</span>
+                <span>Abilities</span>
+            </a>
+            <a href="/projects" class="nav-item">
+                <span class="nav-icon">📁</span>
+                <span>Your Projects</span>
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <a href="/profile" class="nav-item">
+                <span class="nav-icon">👤</span>
+                <span>Profile</span>
+            </a>
+            <a href="/settings" class="nav-item">
+                <span class="nav-icon">⚙️</span>
+                <span>Settings</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- 3D AI Orb -->
+            <div class="ai-orb-container">
+                <div class="ai-orb"></div>
+                <div class="orb-ring"></div>
+            </div>
+
+            <!-- Hero Text -->
+            <p class="welcome-text">Welcome back, {{ username }}!</p>
+            <h1 class="hero-title">Execute. Automate. Dominate.</h1>
+            <p class="hero-subtitle">An AI system built to execute real tasks</p>
+
+            <!-- Task Input -->
+            <div class="task-container">
+                <div class="input-wrapper">
+                    <input 
+                        type="text" 
+                        class="task-input" 
+                        placeholder="Enter your task..."
+                        id="taskInput"
+                    >
+                    <button class="voice-btn" title="Voice Input">🎤</button>
                 </div>
-                
                 <button class="run-task-btn" id="runTaskBtn">
                     Run Task
                 </button>
-
-                <!-- Task Status Display -->
-                <div id="taskStatus" class="task-status" style="display: none;">
-                    <h3>Task Running...</h3>
-                    <div class="status-log" id="statusLog"></div>
-                </div>
             </div>
+        </div>
+    </main>
 
-            <!-- Footer -->
-            <footer class="footer">
-                <span>Intelix</span>
-                <span><a href="/privacy">Privacy</a></span>
-                <span><a href="/terms">Terms</a></span>
-                <span><a href="#">Support</a></span>
-            </footer>
-        </main>
-    </div>
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-text">Intelix</div>
+        <div class="footer-links">
+            <a href="/privacy">Privacy</a>
+            <a href="/terms">Terms</a>
+            <a href="/support">Support</a>
+        </div>
+    </footer>
 
+    <!-- Neural Network Animation Script -->
     <script>
-        // WebSocket connection for real-time updates
-        const socket = io();
+        // Neural Network Canvas Animation
+        const canvas = document.getElementById('neuralCanvas');
+        const ctx = canvas.getContext('2d');
 
-        socket.on('connect', function() {
-            console.log('Connected to server');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
         });
 
-        socket.on('task_started', function(data) {
-            document.getElementById('taskStatus').style.display = 'block';
-            addLog('Task started: ' + data.description);
-        });
-
-        socket.on('task_update', function(data) {
-            const msg = data.message;
-            if (!msg.includes('AI Brain chose') && 
-                !msg.includes('Running click') && 
-                !msg.includes('completed') &&
-                msg !== '✅ Task completed!') {
-                addLog(msg);
+        class Node {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.vx = (Math.random() - 0.5) * 0.5;
+                this.vy = (Math.random() - 0.5) * 0.5;
+                this.radius = Math.random() * 2 + 1;
             }
-        });
 
-        socket.on('task_completed', function(data) {
-            addLog('✅ Task completed!');
-        });
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
 
-        function addLog(message) {
-            const log = document.getElementById('statusLog');
-            const entry = document.createElement('div');
-            entry.className = 'log-entry';
-            entry.textContent = new Date().toLocaleTimeString() + ' - ' + message;
-            log.appendChild(entry);
-            log.scrollTop = log.scrollHeight;
+                if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+                if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(96, 165, 250, 0.8)';
+                ctx.fill();
+            }
         }
 
-        // Run task button
-        document.getElementById('runTaskBtn').addEventListener('click', async function() {
-            const taskInput = document.getElementById('taskInput');
-            const task = taskInput.value.trim();
-            
-            if (!task) {
-                alert('Please enter a task');
-                return;
-            }
+        const nodes = [];
+        const nodeCount = 100;
 
-            try {
-                const response = await fetch('/run-task', {
+        for (let i = 0; i < nodeCount; i++) {
+            nodes.push(new Node());
+        }
+
+        function connectNodes() {
+            for (let i = 0; i < nodes.length; i++) {
+                for (let j = i + 1; j < nodes.length; j++) {
+                    const dx = nodes[i].x - nodes[j].x;
+                    const dy = nodes[i].y - nodes[j].y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < 150) {
+                        ctx.beginPath();
+                        ctx.moveTo(nodes[i].x, nodes[i].y);
+                        ctx.lineTo(nodes[j].x, nodes[j].y);
+                        ctx.strokeStyle = `rgba(96, 165, 250, ${0.2 * (1 - distance / 150)})`;
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            nodes.forEach(node => {
+                node.update();
+                node.draw();
+            });
+
+            connectNodes();
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+
+        // Mouse interaction with particles
+        let mouseX = 0;
+        let mouseY = 0;
+
+        canvas.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+
+            nodes.forEach(node => {
+                const dx = mouseX - node.x;
+                const dy = mouseY - node.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < 100) {
+                    node.vx += dx * 0.0001;
+                    node.vy += dy * 0.0001;
+                }
+            });
+        });
+
+        // Task submission
+        const taskInput = document.getElementById('taskInput');
+        const runTaskBtn = document.getElementById('runTaskBtn');
+
+        runTaskBtn.addEventListener('click', () => {
+            const task = taskInput.value.trim();
+            if (task) {
+                // Send to backend
+                fetch('/run-task', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({ task: task })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Task result:', data);
+                    // Handle response
+                })
+                .catch(error => {
+                    console.error('Error:', error);
                 });
-
-                const data = await response.json();
-                
-                if (data.success) {
-                    taskInput.value = '';
-                    document.getElementById('taskStatus').style.display = 'block';
-                    addLog('Task submitted: ' + task);
-                    
-                    // Display the actual result if available
-                    if (data.result) {
-                        displayResult(data.result);
-                    }
-                } else {
-                    alert('Error: ' + (data.message || 'Unknown error'));
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Failed to submit task');
-            }
-        });
-        
-        function displayResult(result) {
-            const log = document.getElementById('statusLog');
-            
-            // Handle SHOPPING results (FIXED: TOP 5 instead of TOP 3!)
-            if (result.best_deal && result.top_products) {
-                const resultDiv = document.createElement('div');
-                resultDiv.className = 'shopping-results';
-                resultDiv.style.cssText = 'background: rgba(236, 72, 153, 0.1); border-left: 4px solid #ec4899; padding: 20px; margin: 15px 0; border-radius: 12px;';
-                
-                let html = '<div style="color: #ec4899; font-weight: bold; font-size: 18px; margin-bottom: 15px;">🛒 BEST SHOPPING DEALS</div>';
-                
-                if (result.total_products) {
-                    html += `<div style="color: #8b92b0; font-size: 13px; margin-bottom: 15px;">Found ${result.total_products} products. Showing TOP 5 best deals:</div>`;
-                }
-                
-                // Display top products (will show up to 5)
-                result.top_products.forEach((product, idx) => {
-                    const isBestDeal = idx === 0;
-                    html += `
-                        <div style="background: rgba(26, 31, 58, 0.8); border: 2px solid ${isBestDeal ? '#ec4899' : 'rgba(236, 72, 153, 0.3)'}; border-radius: 10px; padding: 15px; margin-bottom: 12px; position: relative;">
-                            ${isBestDeal ? '<div style="position: absolute; top: -10px; right: 15px; background: linear-gradient(135deg, #ec4899, #d946ef); color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: bold;">🏆 BEST DEAL</div>' : ''}
-                            <div style="color: #ec4899; font-weight: bold; font-size: 16px; margin-bottom: 8px;">${idx + 1}. ${product.title}</div>
-                            <div style="color: #e2e8f0; margin-bottom: 6px;">
-                                <span style="color: #8b92b0;">Site:</span> <strong>${product.site}</strong>
-                            </div>
-                            <div style="color: #10b981; font-weight: bold; font-size: 20px; margin-bottom: 10px;">
-                                ${product.price_text}
-                            </div>
-                            <a href="${product.link}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #ec4899 0%, #d946ef 100%); color: white; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600;">
-                                Buy Now on ${product.site} →
-                            </a>
-                        </div>
-                    `;
-                });
-                
-                resultDiv.innerHTML = html;
-                log.appendChild(resultDiv);
-                log.scrollTop = log.scrollHeight;
-            }
-            // Handle INTERNSHIP SEARCH results
-            else if (result.internships && result.internships.length > 0) {
-                const resultDiv = document.createElement('div');
-                resultDiv.className = 'internship-results';
-                resultDiv.style.cssText = 'background: rgba(139, 92, 246, 0.1); border-left: 4px solid #8b5cf6; padding: 20px; margin: 15px 0; border-radius: 12px;';
-                
-                let html = '<div style="color: #8b5cf6; font-weight: bold; font-size: 18px; margin-bottom: 15px;">🎓 TOP INTERNSHIP MATCHES</div>';
-                
-                if (result.total_found) {
-                    html += `<div style="color: #8b92b0; font-size: 13px; margin-bottom: 15px;">Found ${result.total_found} internships. Showing TOP 3 best matches:</div>`;
-                }
-                
-                result.internships.forEach((internship, idx) => {
-                    html += `
-                        <div style="background: rgba(26, 31, 58, 0.8); border: 2px solid rgba(139, 92, 246, 0.3); border-radius: 10px; padding: 15px; margin-bottom: 12px;">
-                            <div style="color: #8b5cf6; font-weight: bold; font-size: 16px; margin-bottom: 8px;">${idx + 1}. ${internship.title}</div>
-                            <div style="color: #e2e8f0; margin-bottom: 6px;">
-                                <span style="color: #8b92b0;">Company:</span> <strong>${internship.company}</strong>
-                            </div>
-                            <div style="color: #e2e8f0; margin-bottom: 6px;">
-                                <span style="color: #8b92b0;">Location:</span> ${internship.location}
-                            </div>
-                            <div style="color: #e2e8f0; margin-bottom: 6px;">
-                                <span style="color: #8b92b0;">Duration:</span> ${internship.duration}
-                            </div>
-                            <div style="color: #10b981; font-weight: bold; margin-bottom: 8px;">
-                                <span style="color: #8b92b0;">Stipend:</span> ${internship.stipend}
-                            </div>
-                            <div style="color: #94a3b8; font-size: 13px; line-height: 1.6; margin-bottom: 10px;">
-                                ${internship.description}
-                            </div>
-                            <a href="${internship.link}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; padding: 8px 20px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600;">
-                                Apply Now →
-                            </a>
-                        </div>
-                    `;
-                });
-                
-                resultDiv.innerHTML = html;
-                log.appendChild(resultDiv);
-                log.scrollTop = log.scrollHeight;
-            }
-            // Handle JOB SEARCH results
-            else if (result.jobs && result.jobs.length > 0) {
-                const resultDiv = document.createElement('div');
-                resultDiv.className = 'job-results';
-                resultDiv.style.cssText = 'background: rgba(34, 197, 94, 0.1); border-left: 4px solid #22c55e; padding: 20px; margin: 15px 0; border-radius: 12px;';
-                
-                let html = '<div style="color: #22c55e; font-weight: bold; font-size: 18px; margin-bottom: 15px;">💼 TOP JOB MATCHES</div>';
-                
-                if (result.total_found) {
-                    html += `<div style="color: #8b92b0; font-size: 13px; margin-bottom: 15px;">Found ${result.total_found} jobs. Showing TOP 3 best matches:</div>`;
-                }
-                
-                result.jobs.forEach((job, idx) => {
-                    html += `
-                        <div style="background: rgba(26, 31, 58, 0.8); border: 2px solid rgba(34, 197, 94, 0.3); border-radius: 10px; padding: 15px; margin-bottom: 12px;">
-                            <div style="color: #22c55e; font-weight: bold; font-size: 16px; margin-bottom: 8px;">${idx + 1}. ${job.title}</div>
-                            <div style="color: #e2e8f0; margin-bottom: 6px;">
-                                <span style="color: #8b92b0;">Company:</span> <strong>${job.company}</strong>
-                            </div>
-                            <div style="color: #e2e8f0; margin-bottom: 6px;">
-                                <span style="color: #8b92b0;">Location:</span> ${job.location}
-                            </div>
-                            <div style="color: #22c55e; font-weight: bold; margin-bottom: 8px;">
-                                <span style="color: #8b92b0;">Salary:</span> ${job.salary}
-                            </div>
-                            <div style="color: #94a3b8; font-size: 13px; line-height: 1.6; margin-bottom: 10px;">
-                                ${job.snippet}
-                            </div>
-                            <a href="${job.link}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; padding: 8px 20px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600;">
-                                Apply Now →
-                            </a>
-                        </div>
-                    `;
-                });
-                
-                if (result.searches_remaining !== undefined) {
-                    html += `<div style="margin-top: 15px; padding: 10px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; text-align: center; color: #60a5fa; font-size: 13px;">
-                        📊 Searches remaining today: <strong>${result.searches_remaining}/3</strong> (FREE tier)
-                    </div>`;
-                }
-                
-                resultDiv.innerHTML = html;
-                log.appendChild(resultDiv);
-                log.scrollTop = log.scrollHeight;
-            }
-            // Handle text extraction results
-            else if (result.summary) {
-                const resultDiv = document.createElement('div');
-                resultDiv.className = 'extraction-result';
-                resultDiv.style.cssText = 'background: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; padding: 15px; margin: 10px 0; border-radius: 8px;';
-                
-                let html = '<div style="color: #60a5fa; font-weight: bold; margin-bottom: 10px;">📄 EXTRACTED SUMMARY:</div>';
-                
-                if (result.topic && result.website) {
-                    html += `<div style="color: #8b92b0; font-size: 13px; margin-bottom: 10px;">Topic: <strong>${result.topic}</strong> from <strong>${result.website}</strong></div>`;
-                }
-                
-                html += `<div style="color: #e2e8f0; line-height: 1.8; white-space: pre-wrap;">${result.summary}</div>`;
-                
-                if (result.keywords && result.keywords.length > 0) {
-                    html += '<div style="margin-top: 12px; color: #8b92b0; font-size: 13px;">Keywords: ';
-                    result.keywords.forEach((kw, idx) => {
-                        html += `<span style="background: rgba(59, 130, 246, 0.2); padding: 4px 8px; border-radius: 4px; margin-right: 5px; display: inline-block;">${kw}</span>`;
-                    });
-                    html += '</div>';
-                }
-                
-                resultDiv.innerHTML = html;
-                log.appendChild(resultDiv);
-                log.scrollTop = log.scrollHeight;
-            }
-            // Handle errors
-            else if (result.error) {
-                addLog('❌ Error: ' + result.error);
-            }
-            // Handle other result types
-            else if (typeof result === 'string') {
-                addLog(result);
-            }
-            else if (result.message) {
-                addLog(result.message);
-            }
-        }
-
-        // Voice command
-        document.getElementById('voiceBtn').addEventListener('click', function() {
-            if ('webkitSpeechRecognition' in window) {
-                const recognition = new webkitSpeechRecognition();
-                recognition.lang = 'en-US';
-                recognition.start();
-
-                recognition.onresult = function(event) {
-                    const transcript = event.results[0][0].transcript;
-                    document.getElementById('taskInput').value = transcript;
-                };
-
-                recognition.onerror = function(event) {
-                    alert('Voice recognition error');
-                };
-            } else {
-                alert('Voice recognition not supported in this browser');
             }
         });
 
-        // Enter key to run task
-        document.getElementById('taskInput').addEventListener('keypress', function(e) {
+        taskInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                document.getElementById('runTaskBtn').click();
+                runTaskBtn.click();
             }
         });
     </script>
