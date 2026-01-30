@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Intelix - Home</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary: #60A5FA;
@@ -18,11 +18,26 @@
             background: #020617;
             color: #E2E8F0;
             overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Neural Network Canvas */
+        #neuralCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.4;
         }
 
         .container {
             display: flex;
             min-height: 100vh;
+            position: relative;
+            z-index: 1;
         }
 
         /* Sidebar */
@@ -52,6 +67,7 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             letter-spacing: 2px;
+            margin: 0;
         }
 
         .sidebar-nav {
@@ -104,6 +120,7 @@
             width: 100%;
         }
 
+        /* Main Content */
         .main-content {
             margin-left: 260px;
             flex: 1;
@@ -112,86 +129,18 @@
             align-items: center;
             justify-content: center;
             padding: 60px 40px 100px;
-            position: relative;
-            z-index: 1;
+            min-height: 100vh;
         }
 
-        /* Neural Network Canvas */
-        #neuralCanvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 0;
-            opacity: 0.4;
-        }
-
-        /* Stats Dashboard */
-        .stats-dashboard {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            max-width: 900px;
-            margin: 0 auto 50px;
-            position: relative;
-            z-index: 1;
-        }
-
-        .stat-card {
-            background: rgba(15, 23, 42, 0.5);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(96, 165, 250, 0.2);
-            border-radius: 16px;
-            padding: 25px;
+        /* Hero Section */
+        .welcome-text {
+            font-size: 16px;
+            color: var(--primary);
             text-align: center;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 3px;
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
-            transform: scaleX(0);
-            transition: transform 0.3s ease;
-        }
-
-        .stat-card:hover {
-            border-color: var(--primary);
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(96, 165, 250, 0.3);
-        }
-
-        .stat-card:hover::before {
-            transform: scaleX(1);
-        }
-
-        .stat-icon {
-            font-size: 32px;
-            margin-bottom: 10px;
-        }
-
-        .stat-value {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 36px;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 5px;
-        }
-
-        .stat-label {
-            font-size: 14px;
-            color: #94A3B8;
+            margin-bottom: 15px;
+            font-weight: 500;
+            letter-spacing: 2px;
             text-transform: uppercase;
-            letter-spacing: 1px;
         }
 
         .hero-title {
@@ -222,21 +171,10 @@
             margin-bottom: 50px;
         }
 
-        .welcome-text {
-            font-size: 16px;
-            color: var(--primary);
-            text-align: center;
-            margin-bottom: 15px;
-            font-weight: 500;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-        }
-
+        /* Task Container */
         .task-container {
             max-width: 900px;
-            margin: 0 auto;
-            position: relative;
-            z-index: 1;
+            width: 100%;
         }
 
         .task-input {
@@ -266,6 +204,7 @@
             color: #475569;
         }
 
+        /* Run Task Button */
         .run-task-btn {
             width: 100%;
             padding: 20px;
@@ -305,6 +244,7 @@
             left: 100%;
         }
 
+        /* Scanline Effect */
         .scanline {
             position: fixed;
             top: 0;
@@ -322,29 +262,35 @@
             100% { transform: translateY(100%); }
         }
 
-        @media (max-width: 768px) {
-            .stats-dashboard {
-                grid-template-columns: 1fr;
-                gap: 15px;
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .sidebar {
+                transform: translateX(-100%);
             }
+            .main-content {
+                margin-left: 0;
+            }
+        }
+
+        @media (max-width: 768px) {
             .hero-title {
                 font-size: 32px;
-            }
-            .stat-value {
-                font-size: 28px;
             }
         }
     </style>
 </head>
 <body>
+    <!-- Scanline Effect -->
     <div class="scanline"></div>
+
+    <!-- Neural Network Canvas -->
     <canvas id="neuralCanvas"></canvas>
 
     <div class="container">
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header">
-                <h2>Intelix</h2>
+                <h2>INTELIX</h2>
             </div>
             <nav class="sidebar-nav">
                 <a href="/home" class="nav-item active">
@@ -365,33 +311,15 @@
                     <span class="nav-icon">👤</span>
                     <span>Profile</span>
                 </a>
-                <a href="#" class="nav-item">
+                <a href="/settings" class="nav-item">
                     <span class="nav-icon">⚙️</span>
                     <span>Settings</span>
                 </a>
             </div>
         </aside>
 
+        <!-- Main Content -->
         <main class="main-content">
-            <!-- Stats Dashboard -->
-            <div class="stats-dashboard">
-                <div class="stat-card">
-                    <div class="stat-icon">✅</div>
-                    <div class="stat-value">12</div>
-                    <div class="stat-label">Tasks Today</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">📊</div>
-                    <div class="stat-value">94%</div>
-                    <div class="stat-label">Success Rate</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">⚡</div>
-                    <div class="stat-value">3.5h</div>
-                    <div class="stat-label">Time Saved</div>
-                </div>
-            </div>
-
             <!-- Hero Section -->
             <p class="welcome-text">Welcome back, {{ username }}!</p>
             <h1 class="hero-title">Execute. Automate. Dominate.</h1>
