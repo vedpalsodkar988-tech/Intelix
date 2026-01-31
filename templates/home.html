@@ -280,6 +280,126 @@
             left: 100%;
         }
 
+        /* Results Container */
+        .results-container {
+            max-width: 900px;
+            width: 100%;
+            margin-top: 40px;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(96, 165, 250, 0.3);
+            border-radius: 16px;
+            padding: 30px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(96, 165, 250, 0.2);
+        }
+
+        .results-header h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 24px;
+            color: #E2E8F0;
+            margin: 0;
+        }
+
+        .close-results {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            color: #EF4444;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.3s ease;
+        }
+
+        .close-results:hover {
+            background: rgba(239, 68, 68, 0.3);
+            transform: scale(1.1);
+        }
+
+        .results-content {
+            color: #E2E8F0;
+            line-height: 1.6;
+        }
+
+        .result-item {
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px solid rgba(96, 165, 250, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .result-item:hover {
+            border-color: var(--primary);
+            transform: translateX(5px);
+        }
+
+        .result-item h4 {
+            color: var(--primary);
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .result-item p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .result-item a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .result-item a:hover {
+            color: var(--primary);
+            text-decoration: underline;
+        }
+
+        .loading-spinner {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--primary);
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(96, 165, 250, 0.3);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
         /* Scanline Effect */
         .scanline {
             position: fixed;
@@ -376,6 +496,17 @@
                     id="taskInput"
                 >
                 <button class="run-task-btn" id="runTaskBtn">Run Task</button>
+            </div>
+
+            <!-- Results Display Area -->
+            <div class="results-container" id="resultsContainer" style="display: none;">
+                <div class="results-header">
+                    <h3>Results</h3>
+                    <button class="close-results" id="closeResults">✕</button>
+                </div>
+                <div class="results-content" id="resultsContent">
+                    <!-- Results will appear here -->
+                </div>
             </div>
         </main>
     </div>
@@ -493,8 +624,15 @@
             if (task) {
                 // Disable button during request
                 const btn = document.getElementById('runTaskBtn');
+                const resultsContainer = document.getElementById('resultsContainer');
+                const resultsContent = document.getElementById('resultsContent');
+                
                 btn.disabled = true;
                 btn.textContent = 'Processing...';
+                
+                // Show results container with loading
+                resultsContainer.style.display = 'block';
+                resultsContent.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><span>AI is working on your task...</span></div>';
                 
                 fetch('/run-task', {
                     method: 'POST',
@@ -505,30 +643,116 @@
                 .then(data => {
                     if (data.limit_exceeded) {
                         alert('⚠️ Monthly Limit Reached!\n\n' + data.message + '\n\nUpgrade to PRO for unlimited tasks!');
-                        // Refresh counter
+                        resultsContainer.style.display = 'none';
                         location.reload();
                     } else if (data.success) {
-                        console.log('Task result:', data);
+                        // Display results
+                        displayResults(data.result);
+                        
                         // Update counter
                         fetch('/check-limits')
                             .then(r => r.json())
                             .then(limits => {
                                 const counterText = document.querySelector('.counter-text');
-                                counterText.textContent = `${limits.remaining} tasks remaining this month`;
+                                if (limits.subscription === 'pro') {
+                                    counterText.textContent = '✨ Unlimited Tasks (PRO)';
+                                    counterText.classList.add('unlimited');
+                                } else {
+                                    counterText.textContent = `${limits.remaining} tasks remaining this month`;
+                                }
                             });
                     } else {
-                        alert('Error: ' + (data.message || 'Task failed'));
+                        resultsContent.innerHTML = '<div class="result-item"><h4>❌ Error</h4><p>' + (data.message || 'Task failed') + '</p></div>';
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('Error running task. Please try again.');
+                    resultsContent.innerHTML = '<div class="result-item"><h4>❌ Error</h4><p>Failed to run task. Please try again.</p></div>';
                 })
                 .finally(() => {
                     btn.disabled = false;
                     btn.textContent = 'Run Task';
                 });
             }
+        });
+
+        // Function to display results based on type
+        function displayResults(result) {
+            const resultsContent = document.getElementById('resultsContent');
+            
+            if (!result) {
+                resultsContent.innerHTML = '<div class="result-item"><h4>No Results</h4><p>Task completed but no results returned.</p></div>';
+                return;
+            }
+
+            let html = '';
+
+            // Shopping results
+            if (result.products && Array.isArray(result.products)) {
+                html += '<h4 style="color: var(--primary); margin-bottom: 20px;">🛒 Shopping Results:</h4>';
+                result.products.forEach(product => {
+                    html += `
+                        <div class="result-item">
+                            <h4>${product.title || product.name}</h4>
+                            <p><strong>Price:</strong> ${product.price || 'N/A'}</p>
+                            <p><strong>Platform:</strong> ${product.platform || product.source || 'Unknown'}</p>
+                            ${product.link ? `<p><a href="${product.link}" target="_blank">View Product →</a></p>` : ''}
+                        </div>
+                    `;
+                });
+            }
+            
+            // Job results
+            else if (result.jobs && Array.isArray(result.jobs)) {
+                html += '<h4 style="color: var(--primary); margin-bottom: 20px;">💼 Job Results:</h4>';
+                result.jobs.forEach(job => {
+                    html += `
+                        <div class="result-item">
+                            <h4>${job.title}</h4>
+                            <p><strong>Company:</strong> ${job.company || 'N/A'}</p>
+                            <p><strong>Location:</strong> ${job.location || 'N/A'}</p>
+                            <p><strong>Experience:</strong> ${job.experience || 'N/A'}</p>
+                            ${job.salary ? `<p><strong>Salary:</strong> ${job.salary}</p>` : ''}
+                            ${job.link ? `<p><a href="${job.link}" target="_blank">Apply Now →</a></p>` : ''}
+                        </div>
+                    `;
+                });
+            }
+            
+            // Internship results
+            else if (result.internships && Array.isArray(result.internships)) {
+                html += '<h4 style="color: var(--primary); margin-bottom: 20px;">🎓 Internship Results:</h4>';
+                result.internships.forEach(internship => {
+                    html += `
+                        <div class="result-item">
+                            <h4>${internship.title}</h4>
+                            <p><strong>Company:</strong> ${internship.company || 'N/A'}</p>
+                            <p><strong>Location:</strong> ${internship.location || 'N/A'}</p>
+                            <p><strong>Duration:</strong> ${internship.duration || 'N/A'}</p>
+                            ${internship.stipend ? `<p><strong>Stipend:</strong> ${internship.stipend}</p>` : ''}
+                            ${internship.link ? `<p><a href="${internship.link}" target="_blank">Apply Now →</a></p>` : ''}
+                        </div>
+                    `;
+                });
+            }
+            
+            // Generic result
+            else if (result.message) {
+                html += `<div class="result-item"><p>${result.message}</p></div>`;
+            }
+            
+            // Raw result display
+            else {
+                html += `<div class="result-item"><h4>Result:</h4><pre style="white-space: pre-wrap; word-wrap: break-word;">${JSON.stringify(result, null, 2)}</pre></div>`;
+            }
+
+            resultsContent.innerHTML = html || '<div class="result-item"><p>Task completed successfully!</p></div>';
+        }
+
+        // Close results
+        document.getElementById('closeResults').addEventListener('click', () => {
+            document.getElementById('resultsContainer').style.display = 'none';
+            document.getElementById('taskInput').value = '';
         });
 
         document.getElementById('taskInput').addEventListener('keypress', (e) => {
