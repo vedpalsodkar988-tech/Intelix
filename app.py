@@ -57,12 +57,14 @@ def init_db():
         conn = get_db_connection()
         c = conn.cursor()
         
-        # Users table
+        # Users table - UPDATED with subscription columns
         c.execute('''CREATE TABLE IF NOT EXISTS users
                      (id SERIAL PRIMARY KEY,
                       username TEXT UNIQUE NOT NULL,
                       email TEXT UNIQUE NOT NULL,
                       password TEXT NOT NULL,
+                      subscription TEXT DEFAULT 'free',
+                      subscription_expires TIMESTAMP,
                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
         
         # Tasks table
@@ -97,6 +99,13 @@ def init_db():
                       expected_salary TEXT,
                       FOREIGN KEY(user_id) REFERENCES users(id))''')
         
+        # Add subscription columns to existing users if they don't have them
+        try:
+            c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription TEXT DEFAULT 'free'")
+            c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_expires TIMESTAMP")
+        except:
+            pass  # Columns already exist
+        
         print("✅ Database tables created successfully!")
         
         conn.commit()
@@ -106,6 +115,48 @@ def init_db():
         raise
 
 init_db()
+
+# RATE LIMITING FUNCTION - NEW!
+def check_user_limits(user_id):
+    """Check if user has exceeded their monthly task limit"""
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    # Get user subscription status
+    c.execute('SELECT subscription FROM users WHERE id = %s', (user_id,))
+    user = c.fetchone()
+    subscription = user['subscription'] if user else 'free'
+    
+    # PRO users have unlimited tasks
+    if subscription == 'pro':
+        conn.close()
+        return {'allowed': True, 'remaining': 'Unlimited', 'subscription': 'pro'}
+    
+    # Count tasks this month for FREE users
+    first_day_of_month = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    c.execute('''
+        SELECT COUNT(*) as count 
+        FROM tasks 
+        WHERE user_id = %s 
+        AND created_at >= %s
+    ''', (user_id, first_day_of_month))
+    
+    result = c.fetchone()
+    tasks_this_month = result['count'] if result else 0
+    conn.close()
+    
+    # FREE tier limit: 10 tasks per month
+    FREE_LIMIT = 10
+    remaining = FREE_LIMIT - tasks_this_month
+    
+    return {
+        'allowed': tasks_this_month < FREE_LIMIT,
+        'remaining': max(0, remaining),
+        'total': FREE_LIMIT,
+        'used': tasks_this_month,
+        'subscription': 'free'
+    }
 
 # Abilities configuration - UPDATED
 ABILITIES = [
@@ -210,8 +261,8 @@ def signup():
         try:
             conn = get_db_connection()
             c = conn.cursor()
-            c.execute('INSERT INTO users (username, email, password) VALUES (%s, %s, %s)',
-                     (username, email, hashed_password))
+            c.execute('INSERT INTO users (username, email, password, subscription) VALUES (%s, %s, %s, %s)',
+                     (username, email, hashed_password, 'free'))
             conn.commit()
             
             # Auto-login after signup
@@ -325,10 +376,31 @@ def settings():
         return redirect(url_for('login'))
     return render_template('settings.html', username=session.get('username'))
 
+# NEW ROUTE - Check task limits
+@app.route('/check-limits')
+def check_limits():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not logged in'})
+    
+    limit_check = check_user_limits(session['user_id'])
+    return jsonify(limit_check)
+
+# UPDATED ROUTE - Run task with rate limiting
 @app.route('/run-task', methods=['POST'])
 def run_task():
     if 'user_id' not in session:
         return jsonify({'success': False, 'message': 'Not logged in'})
+    
+    # CHECK RATE LIMIT FIRST - NEW!
+    limit_check = check_user_limits(session['user_id'])
+    
+    if not limit_check['allowed']:
+        return jsonify({
+            'success': False,
+            'message': f'Monthly limit reached! You\'ve used all {limit_check["total"]} free tasks this month. Upgrade to PRO for unlimited tasks!',
+            'limit_exceeded': True,
+            'subscription': limit_check['subscription']
+        })
     
     data = request.json
     task_description = data.get('task')
