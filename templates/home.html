@@ -168,7 +168,43 @@
             font-size: 18px;
             color: #94A3B8;
             text-align: center;
-            margin-bottom: 50px;
+            margin-bottom: 30px;
+        }
+
+        /* Task Counter */
+        .task-counter {
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(96, 165, 250, 0.3);
+            border-radius: 12px;
+            padding: 15px 30px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+        }
+
+        .task-counter:hover {
+            border-color: var(--primary);
+            box-shadow: 0 5px 20px rgba(96, 165, 250, 0.2);
+        }
+
+        .counter-icon {
+            font-size: 20px;
+        }
+
+        .counter-text {
+            font-size: 14px;
+            color: #E2E8F0;
+            font-weight: 500;
+        }
+
+        .counter-text.unlimited {
+            background: linear-gradient(135deg, var(--accent), var(--primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
         }
 
         /* Task Container */
@@ -324,6 +360,12 @@
             <p class="welcome-text">Welcome back, {{ username }}!</p>
             <h1 class="hero-title">Execute. Automate. Dominate.</h1>
             <p class="hero-subtitle">An AI system built to execute real tasks</p>
+            
+            <!-- Task Counter -->
+            <div class="task-counter" id="taskCounter">
+                <span class="counter-icon">⚡</span>
+                <span class="counter-text">Loading...</span>
+            </div>
 
             <!-- Task Input -->
             <div class="task-container">
@@ -339,6 +381,27 @@
     </div>
 
     <script>
+        // Fetch and display task limits
+        fetch('/check-limits')
+            .then(response => response.json())
+            .then(data => {
+                const counterText = document.querySelector('.counter-text');
+                if (data.subscription === 'pro') {
+                    counterText.textContent = '✨ Unlimited Tasks (PRO)';
+                    counterText.classList.add('unlimited');
+                } else {
+                    counterText.textContent = `${data.remaining} tasks remaining this month`;
+                    if (data.remaining === 0) {
+                        counterText.textContent = '⚠️ Monthly limit reached - Upgrade to PRO';
+                        counterText.style.color = '#fb923c';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching limits:', error);
+                document.querySelector('.counter-text').textContent = '10 tasks available';
+            });
+
         // Neural Network Animation
         const canvas = document.getElementById('neuralCanvas');
         const ctx = canvas.getContext('2d');
@@ -428,14 +491,43 @@
         document.getElementById('runTaskBtn').addEventListener('click', () => {
             const task = document.getElementById('taskInput').value.trim();
             if (task) {
+                // Disable button during request
+                const btn = document.getElementById('runTaskBtn');
+                btn.disabled = true;
+                btn.textContent = 'Processing...';
+                
                 fetch('/run-task', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ task: task })
                 })
                 .then(response => response.json())
-                .then(data => console.log('Task result:', data))
-                .catch(error => console.error('Error:', error));
+                .then(data => {
+                    if (data.limit_exceeded) {
+                        alert('⚠️ Monthly Limit Reached!\n\n' + data.message + '\n\nUpgrade to PRO for unlimited tasks!');
+                        // Refresh counter
+                        location.reload();
+                    } else if (data.success) {
+                        console.log('Task result:', data);
+                        // Update counter
+                        fetch('/check-limits')
+                            .then(r => r.json())
+                            .then(limits => {
+                                const counterText = document.querySelector('.counter-text');
+                                counterText.textContent = `${limits.remaining} tasks remaining this month`;
+                            });
+                    } else {
+                        alert('Error: ' + (data.message || 'Task failed'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error running task. Please try again.');
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.textContent = 'Run Task';
+                });
             }
         });
 
