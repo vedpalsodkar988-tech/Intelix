@@ -2,16 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-<!-- Google Analytics -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-X7ZYY773JC"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-X7ZYY773JC');
-</script>
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-X7ZYY773JC"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-X7ZYY773JC');
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat History - AI Agent</title>
+    <title>Your Projects - Intelix</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <style>
         .history-container {
@@ -90,6 +90,8 @@
             color: #a5b4cb;
             font-size: 14px;
             line-height: 1.6;
+            max-height: 300px;
+            overflow-y: auto;
         }
         .empty-state {
             text-align: center;
@@ -127,7 +129,7 @@
                     <span class="nav-icon">👤</span>
                     Profile
                 </a>
-                <a href="#" class="nav-item">
+                <a href="/settings" class="nav-item">
                     <span class="nav-icon">⚙️</span>
                     Settings
                 </a>
@@ -145,20 +147,23 @@
                     {% for task in tasks %}
                     <div class="task-item">
                         <div class="task-header">
-                            <div class="task-description">{{ task[2] }}</div>
-                            <div class="task-status status-{{ task[3] }}">{{ task[3] }}</div>
+                            <div class="task-description">{{ task.task_description or task['task_description'] }}</div>
+                            <div class="task-status status-{{ task.status or task['status'] }}">
+                                {{ task.status or task['status'] }}
+                            </div>
                         </div>
                         
                         <div class="task-meta">
-                            <span>🕐 {{ task[4] }}</span>
-                            {% if task[5] %}
-                            <span>✓ Completed: {{ task[5] }}</span>
+                            <span>🕐 Created: {{ task.created_at.strftime('%Y-%m-%d %H:%M') if task.created_at else (task['created_at'].strftime('%Y-%m-%d %H:%M') if task['created_at'] else 'N/A') }}</span>
+                            {% if task.completed_at or task['completed_at'] %}
+                            <span>✓ Completed: {{ task.completed_at.strftime('%Y-%m-%d %H:%M') if task.completed_at else (task['completed_at'].strftime('%Y-%m-%d %H:%M') if task['completed_at'] else '') }}</span>
                             {% endif %}
                         </div>
 
-                        {% if task[4] %}
+                        {% if task.result or task['result'] %}
                         <div class="task-result">
-                            {{ task[4] if task[4] else 'No result available' }}
+                            <strong>Result:</strong><br>
+                            {{ task.result or task['result'] }}
                         </div>
                         {% endif %}
                     </div>
@@ -173,5 +178,4 @@
         </main>
     </div>
 </body>
-
 </html>
