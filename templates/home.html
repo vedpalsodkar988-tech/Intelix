@@ -706,7 +706,7 @@
                             <h4>${product.title || product.name}</h4>
                             <p><strong>Price:</strong> ${product.price || 'N/A'}</p>
                             <p><strong>Platform:</strong> ${product.platform || product.source || 'Unknown'}</p>
-                            ${product.link ? `<p><a href="${product.link}" target="_blank">View Product →</a></p>` : ''}
+                            ${product.link ? `<p><a href="${product.link}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #60A5FA, #A78BFA); color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; margin-top: 10px;">Buy Now →</a></p>` : ''}
                         </div>
                     `;
                 });
