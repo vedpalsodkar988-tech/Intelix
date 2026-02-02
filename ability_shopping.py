@@ -1,4 +1,4 @@
-importimport requests
+import requests
 import os
 import re
 from bs4 import BeautifulSoup
@@ -156,7 +156,7 @@ def scrape_amazon_products(query, scraperapi_key):
                 products.append({
                     "site": "Amazon",
                     "title": title,
-                    "name": title,  # Add 'name' field for compatibility
+                    "name": title,
                     "price": f"₹{int(price):,}",
                     "price_numeric": price,
                     "link": link,
@@ -318,7 +318,7 @@ def scrape_flipkart_products(query, scraperapi_key):
                 products.append({
                     "site": "Flipkart",
                     "title": title,
-                    "name": title,  # Add 'name' field for compatibility
+                    "name": title,
                     "price": f"₹{int(price):,}",
                     "price_numeric": price,
                     "link": link,
@@ -387,10 +387,10 @@ def shopping_assistant_task(query, user_profile=None):
         print(f"\n✅ Found {len(all_products)} total products")
         print(f"🎯 BEST DEAL: {all_products[0]['title'][:50]}... - {all_products[0]['price']} ({all_products[0]['site']})")
         
-        # FIXED: Return 'products' array (not 'top_products')
+        # Return TOP 5 products with proper format for frontend
         return {
             "status": "success",
-            "products": all_products[:10],  # Return top 10 products with ALL data including links
+            "products": all_products[:5],
             "total_found": len(all_products),
             "query": product_query
         }
