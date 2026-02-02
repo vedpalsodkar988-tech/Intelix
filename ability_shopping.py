@@ -1,4 +1,4 @@
-import requests
+importimport requests
 import os
 import re
 from bs4 import BeautifulSoup
@@ -156,9 +156,11 @@ def scrape_amazon_products(query, scraperapi_key):
                 products.append({
                     "site": "Amazon",
                     "title": title,
-                    "price": price,
-                    "price_text": f"₹{int(price):,}",
+                    "name": title,  # Add 'name' field for compatibility
+                    "price": f"₹{int(price):,}",
+                    "price_numeric": price,
                     "link": link,
+                    "platform": "Amazon",
                     "rating": rating,
                     "reviews": reviews
                 })
@@ -316,9 +318,11 @@ def scrape_flipkart_products(query, scraperapi_key):
                 products.append({
                     "site": "Flipkart",
                     "title": title,
-                    "price": price,
-                    "price_text": f"₹{int(price):,}",
+                    "name": title,  # Add 'name' field for compatibility
+                    "price": f"₹{int(price):,}",
+                    "price_numeric": price,
                     "link": link,
+                    "platform": "Flipkart",
                     "rating": rating,
                     "reviews": reviews
                 })
@@ -378,23 +382,16 @@ def shopping_assistant_task(query, user_profile=None):
             }
         
         # Sort by price - cheapest first
-        all_products.sort(key=lambda x: x['price'])
+        all_products.sort(key=lambda x: x['price_numeric'])
         
         print(f"\n✅ Found {len(all_products)} total products")
-        print(f"🎯 BEST DEAL: {all_products[0]['title'][:50]}... - {all_products[0]['price_text']} ({all_products[0]['site']})")
+        print(f"🎯 BEST DEAL: {all_products[0]['title'][:50]}... - {all_products[0]['price']} ({all_products[0]['site']})")
         
-        # Create summary - CHANGED FROM TOP 3 TO TOP 5!
-        top_5_summary = "\n".join([
-            f"{i+1}. {p['title'][:60]} - {p['price_text']} ({p['site']})"
-            for i, p in enumerate(all_products[:5])
-        ])
-        
+        # FIXED: Return 'products' array (not 'top_products')
         return {
             "status": "success",
-            "best_deal": all_products[0],
-            "top_products": all_products[:5],
-            "total_products": len(all_products),
-            "message": f"🎉 Found {len(all_products)} products!\n\n🏆 TOP 5 BEST DEALS:\n{top_5_summary}",
+            "products": all_products[:10],  # Return top 10 products with ALL data including links
+            "total_found": len(all_products),
             "query": product_query
         }
         
