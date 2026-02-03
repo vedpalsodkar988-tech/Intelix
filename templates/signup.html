@@ -14,7 +14,6 @@
     <title>Sign Up - Intelix</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
     <style>
-        /* Alert styling */
         .alert {
             position: fixed;
             top: 20px;
@@ -28,34 +27,37 @@
             box-shadow: 0 10px 40px rgba(0,0,0,0.3);
             min-width: 300px;
         }
-        
         .alert-success {
             background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
             color: white;
             border: 2px solid rgba(255,255,255,0.3);
         }
-        
         .alert-error {
             background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
             color: white;
             border: 2px solid rgba(255,255,255,0.3);
         }
-        
         @keyframes slideIn {
-            from {
-                transform: translateX(400px);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
-        
-        .alert-icon {
-            font-size: 24px;
-            margin-right: 10px;
+        .alert-icon { font-size: 24px; margin-right: 10px; }
+        .password-wrapper { position: relative; }
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 20px;
+            padding: 5px;
+            color: #94a3b8;
+            transition: color 0.3s ease;
         }
+        .password-toggle:hover { color: #60a5fa; }
+        .password-wrapper input { padding-right: 45px; }
     </style>
 </head>
 <body>
@@ -65,109 +67,92 @@
                 <h1>Create Account</h1>
                 <p>Join the AgentOS platform</p>
             </div>
-
             <form id="signupForm" class="auth-form">
                 <div class="form-group">
                     <label for="username">Username</label>
                     <input type="text" id="username" name="username" required 
                            placeholder="Choose a username" autocomplete="off">
                 </div>
-
                 <div class="form-group">
                     <label for="email">Email</label>
                     <input type="email" id="email" name="email" required 
                            placeholder="your.email@example.com" autocomplete="off">
                 </div>
-
                 <div class="form-group">
                     <label for="password">Password</label>
-                    <input type="password" id="password" name="password" required 
-                           placeholder="Create a strong password" autocomplete="new-password">
+                    <div class="password-wrapper">
+                        <input type="password" id="password" name="password" required 
+                               placeholder="Create a strong password" autocomplete="new-password">
+                        <button type="button" class="password-toggle" id="togglePassword">👁️</button>
+                    </div>
                 </div>
-
                 <div class="form-group">
                     <label for="confirmPassword">Confirm Password</label>
-                    <input type="password" id="confirmPassword" name="confirmPassword" required 
-                           placeholder="Re-enter your password" autocomplete="new-password">
+                    <div class="password-wrapper">
+                        <input type="password" id="confirmPassword" name="confirmPassword" required 
+                               placeholder="Re-enter your password" autocomplete="new-password">
+                        <button type="button" class="password-toggle" id="toggleConfirmPassword">👁️</button>
+                    </div>
                 </div>
-
                 <button type="submit" class="auth-btn">Create Account</button>
             </form>
-
             <div class="auth-footer">
                 <p>Already have an account? <a href="/login">Login</a></p>
             </div>
         </div>
     </div>
-
     <script>
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+        togglePassword.addEventListener('click', function() {
+            const type = passwordInput.type === 'password' ? 'text' : 'password';
+            passwordInput.type = type;
+            this.textContent = type === 'password' ? '👁️' : '🙈';
+        });
+        const toggleConfirmPassword = document.getElementById('toggleConfirmPassword');
+        const confirmPasswordInput = document.getElementById('confirmPassword');
+        toggleConfirmPassword.addEventListener('click', function() {
+            const type = confirmPasswordInput.type === 'password' ? 'text' : 'password';
+            confirmPasswordInput.type = type;
+            this.textContent = type === 'password' ? '👁️' : '🙈';
+        });
         function showAlert(message, type) {
-            // Remove any existing alerts
             const existingAlert = document.querySelector('.alert');
-            if (existingAlert) {
-                existingAlert.remove();
-            }
-
-            // Create new alert
+            if (existingAlert) existingAlert.remove();
             const alert = document.createElement('div');
             alert.className = `alert alert-${type}`;
-            alert.innerHTML = `
-                <span class="alert-icon">${type === 'success' ? '✅' : '❌'}</span>
-                <span>${message}</span>
-            `;
+            alert.innerHTML = `<span class="alert-icon">${type === 'success' ? '✅' : '❌'}</span><span>${message}</span>`;
             document.body.appendChild(alert);
-
-            // Auto remove after 5 seconds
             setTimeout(() => {
                 alert.style.animation = 'slideIn 0.3s ease reverse';
                 setTimeout(() => alert.remove(), 300);
             }, 5000);
         }
-
         document.getElementById('signupForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-
             const username = document.getElementById('username').value.trim();
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
-
-            // Validation
             if (password !== confirmPassword) {
                 showAlert('Passwords do not match!', 'error');
                 return;
             }
-
             if (password.length < 6) {
                 showAlert('Password must be at least 6 characters long!', 'error');
                 return;
             }
-
             try {
                 const response = await fetch('/signup', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        username: username,
-                        email: email,
-                        password: password
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: username, email: email, password: password })
                 });
-
                 const data = await response.json();
-
                 if (data.success) {
-                    showAlert('✨ Account created successfully! Redirecting to login...', 'success');
-                    
-                    // Clear form
+                    showAlert('✨ Account created successfully! Redirecting to home...', 'success');
                     document.getElementById('signupForm').reset();
-                    
-                    // Redirect after 2 seconds
-                    setTimeout(() => {
-                        window.location.href = '/login';
-                    }, 2000);
+                    setTimeout(() => { window.location.href = '/home'; }, 1000);
                 } else {
                     showAlert(data.message || 'Signup failed. Please try again.', 'error');
                 }
@@ -179,4 +164,3 @@
     </script>
 </body>
 </html>
-
