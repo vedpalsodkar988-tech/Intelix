@@ -37,6 +37,7 @@
             padding: 25px;
             margin-bottom: 20px;
             transition: all 0.3s ease;
+            cursor: pointer;
         }
         .task-item:hover {
             border-color: #3b82f6;
@@ -84,14 +85,49 @@
         }
         .task-result {
             margin-top: 15px;
-            padding: 15px;
+            padding: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .task-result.expanded {
+            max-height: 2000px;
+            padding: 15px 0;
+        }
+        .result-card {
             background: rgba(10, 14, 39, 0.5);
-            border-radius: 8px;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+        .result-card:hover {
+            border-color: rgba(59, 130, 246, 0.5);
+            transform: translateY(-2px);
+        }
+        .result-card h4 {
+            color: #60a5fa;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .result-card p {
             color: #a5b4cb;
+            margin: 5px 0;
             font-size: 14px;
-            line-height: 1.6;
-            max-height: 300px;
-            overflow-y: auto;
+        }
+        .result-card a {
+            display: inline-block;
+            background: linear-gradient(135deg, #60A5FA, #A78BFA);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            margin-top: 10px;
+            transition: transform 0.2s ease;
+        }
+        .result-card a:hover {
+            transform: translateY(-2px);
         }
         .empty-state {
             text-align: center;
@@ -101,6 +137,15 @@
         .empty-state h2 {
             font-size: 24px;
             margin-bottom: 10px;
+        }
+        .toggle-results {
+            color: #60a5fa;
+            font-size: 13px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        .toggle-results:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -145,7 +190,7 @@
 
                 {% if tasks %}
                     {% for task in tasks %}
-                    <div class="task-item">
+                    <div class="task-item" onclick="toggleResults('task-{{ loop.index }}')">
                         <div class="task-header">
                             <div class="task-description">{{ task.task_description or task['task_description'] }}</div>
                             <div class="task-status status-{{ task.status or task['status'] }}">
@@ -160,11 +205,95 @@
                             {% endif %}
                         </div>
 
-                        {% if task.result or task['result'] %}
-                        <div class="task-result">
-                            <strong>Result:</strong><br>
-                            {{ task.result or task['result'] }}
+                        <div class="toggle-results">
+                            Click to view results ↓
                         </div>
+
+                        {% if task.result or task['result'] %}
+                        <div class="task-result" id="task-{{ loop.index }}">
+                            <div id="result-content-{{ loop.index }}"></div>
+                        </div>
+                        <script>
+                            // Parse and display results
+                            (function() {
+                                try {
+                                    const resultStr = `{{ (task.result or task['result']) | safe }}`;
+                                    let result;
+                                    
+                                    // Try to parse as JSON if it looks like JSON
+                                    if (resultStr.trim().startsWith('{') || resultStr.trim().startsWith('[')) {
+                                        // Replace Python-style quotes with JSON-style
+                                        const jsonStr = resultStr.replace(/'/g, '"').replace(/None/g, 'null').replace(/True/g, 'true').replace(/False/g, 'false');
+                                        result = JSON.parse(jsonStr);
+                                    } else {
+                                        result = { message: resultStr };
+                                    }
+                                    
+                                    let html = '';
+                                    
+                                    // Shopping results
+                                    if (result.products && Array.isArray(result.products)) {
+                                        html += '<h3 style="color: #60a5fa; margin-bottom: 15px;">🛒 Shopping Results</h3>';
+                                        result.products.forEach(product => {
+                                            html += `
+                                                <div class="result-card">
+                                                    <h4>${product.title || product.name}</h4>
+                                                    <p><strong>Price:</strong> ${product.price}</p>
+                                                    <p><strong>Platform:</strong> ${product.platform || product.site}</p>
+                                                    ${product.link ? `<a href="${product.link}" target="_blank">Buy Now →</a>` : ''}
+                                                </div>
+                                            `;
+                                        });
+                                    }
+                                    // Job results
+                                    else if (result.jobs && Array.isArray(result.jobs)) {
+                                        html += '<h3 style="color: #60a5fa; margin-bottom: 15px;">💼 Job Results</h3>';
+                                        result.jobs.forEach(job => {
+                                            html += `
+                                                <div class="result-card">
+                                                    <h4>${job.title}</h4>
+                                                    <p><strong>Company:</strong> ${job.company || 'N/A'}</p>
+                                                    <p><strong>Location:</strong> ${job.location || 'N/A'}</p>
+                                                    <p><strong>Experience:</strong> ${job.experience || 'N/A'}</p>
+                                                    ${job.salary ? `<p><strong>Salary:</strong> ${job.salary}</p>` : ''}
+                                                    ${job.link ? `<a href="${job.link}" target="_blank">Apply Now →</a>` : ''}
+                                                </div>
+                                            `;
+                                        });
+                                    }
+                                    // Internship results
+                                    else if (result.internships && Array.isArray(result.internships)) {
+                                        html += '<h3 style="color: #60a5fa; margin-bottom: 15px;">🎓 Internship Results</h3>';
+                                        result.internships.forEach(internship => {
+                                            html += `
+                                                <div class="result-card">
+                                                    <h4>${internship.title}</h4>
+                                                    <p><strong>Company:</strong> ${internship.company || 'N/A'}</p>
+                                                    <p><strong>Location:</strong> ${internship.location || 'N/A'}</p>
+                                                    <p><strong>Duration:</strong> ${internship.duration || 'N/A'}</p>
+                                                    ${internship.stipend ? `<p><strong>Stipend:</strong> ${internship.stipend}</p>` : ''}
+                                                    ${internship.link ? `<a href="${internship.link}" target="_blank">Apply Now →</a>` : ''}
+                                                </div>
+                                            `;
+                                        });
+                                    }
+                                    // Message result
+                                    else if (result.message) {
+                                        html += `<div class="result-card"><p>${result.message}</p></div>`;
+                                    }
+                                    // Fallback
+                                    else {
+                                        html += `<div class="result-card"><p>${resultStr}</p></div>`;
+                                    }
+                                    
+                                    document.getElementById('result-content-{{ loop.index }}').innerHTML = html;
+                                } catch (e) {
+                                    // If parsing fails, show raw result
+                                    document.getElementById('result-content-{{ loop.index }}').innerHTML = 
+                                        `<div class="result-card"><p>{{ (task.result or task['result']) }}</p></div>`;
+                                }
+                            })();
+                        </script>
                         {% endif %}
                     </div>
                     {% endfor %}
@@ -177,5 +306,16 @@
             </div>
         </main>
     </div>
+
+    <script>
+        function toggleResults(taskId) {
+            const resultDiv = document.getElementById(taskId);
+            if (resultDiv.classList.contains('expanded')) {
+                resultDiv.classList.remove('expanded');
+            } else {
+                resultDiv.classList.add('expanded');
+            }
+        }
+    </script>
 </body>
 </html>
