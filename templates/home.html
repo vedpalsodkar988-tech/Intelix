@@ -632,6 +632,15 @@
         document.getElementById('runTaskBtn').addEventListener('click', () => {
             const task = document.getElementById('taskInput').value.trim();
             if (task) {
+                // Track task start in Google Analytics
+                if (typeof gtag !== 'undefined') {
+                    gtag('event', 'task_started', {
+                        'event_category': 'Tasks',
+                        'event_label': task.substring(0, 50), // First 50 chars of task
+                        'value': 1
+                    });
+                }
+                
                 // Disable button during request
                 const btn = document.getElementById('runTaskBtn');
                 const resultsContainer = document.getElementById('resultsContainer');
@@ -652,10 +661,33 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.limit_exceeded) {
+                        // Track limit exceeded
+                        if (typeof gtag !== 'undefined') {
+                            gtag('event', 'limit_exceeded', {
+                                'event_category': 'Tasks',
+                                'event_label': 'Monthly limit reached'
+                            });
+                        }
+                        
                         alert('⚠️ Monthly Limit Reached!\n\n' + data.message + '\n\nUpgrade to PRO for unlimited tasks!');
                         resultsContainer.style.display = 'none';
                         location.reload();
                     } else if (data.success) {
+                        // Track successful task completion
+                        if (typeof gtag !== 'undefined') {
+                            // Detect task type
+                            let taskType = 'unknown';
+                            if (data.result && data.result.products) taskType = 'shopping';
+                            else if (data.result && data.result.jobs) taskType = 'job_search';
+                            else if (data.result && data.result.internships) taskType = 'internship_search';
+                            
+                            gtag('event', 'task_completed', {
+                                'event_category': 'Tasks',
+                                'event_label': taskType,
+                                'value': 1
+                            });
+                        }
+                        
                         // Display results
                         displayResults(data.result);
                         
@@ -672,11 +704,28 @@
                                 }
                             });
                     } else {
+                        // Track task failure
+                        if (typeof gtag !== 'undefined') {
+                            gtag('event', 'task_failed', {
+                                'event_category': 'Tasks',
+                                'event_label': data.message || 'Unknown error'
+                            });
+                        }
+                        
                         resultsContent.innerHTML = '<div class="result-item"><h4>❌ Error</h4><p>' + (data.message || 'Task failed') + '</p></div>';
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
+                    
+                    // Track network error
+                    if (typeof gtag !== 'undefined') {
+                        gtag('event', 'task_error', {
+                            'event_category': 'Tasks',
+                            'event_label': 'Network error'
+                        });
+                    }
+                    
                     resultsContent.innerHTML = '<div class="result-item"><h4>❌ Error</h4><p>Failed to run task. Please try again.</p></div>';
                 })
                 .finally(() => {
@@ -697,7 +746,7 @@
 
             let html = '';
 
-            // Shopping results
+            // Shopping results - Handle both formats
             if (result.products && Array.isArray(result.products)) {
                 html += '<h4 style="color: var(--primary); margin-bottom: 20px;">🛒 Shopping Results:</h4>';
                 result.products.forEach(product => {
@@ -711,6 +760,18 @@
                     `;
                 });
             }
+            // Shopping results as message (current format)
+            else if (result.message && result.message.includes('products') || result.message && result.message.includes('DEALS')) {
+                html += '<h4 style="color: var(--primary); margin-bottom: 20px;">🛒 Shopping Results:</h4>';
+                html += `<div class="result-item"><p style="white-space: pre-wrap;">${result.message}</p></div>`;
+                
+                // Try to extract products from message if possible
+                if (result.message.includes('Amazon') || result.message.includes('Flipkart')) {
+                    html += '<div class="result-item" style="background: rgba(52, 211, 153, 0.1); border-color: rgba(52, 211, 153, 0.3);">';
+                    html += '<p><strong>💡 Tip:</strong> The links are embedded in the results above. Click on the product names or prices to visit the store!</p>';
+                    html += '</div>';
+                }
+            }
             
             // Job results
             else if (result.jobs && Array.isArray(result.jobs)) {
@@ -723,7 +784,7 @@
                             <p><strong>Location:</strong> ${job.location || 'N/A'}</p>
                             <p><strong>Experience:</strong> ${job.experience || 'N/A'}</p>
                             ${job.salary ? `<p><strong>Salary:</strong> ${job.salary}</p>` : ''}
-                            ${job.link ? `<p><a href="${job.link}" target="_blank">Apply Now →</a></p>` : ''}
+                            ${job.link ? `<p><a href="${job.link}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #60A5FA, #A78BFA); color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; margin-top: 10px;">Apply Now →</a></p>` : ''}
                         </div>
                     `;
                 });
@@ -740,15 +801,15 @@
                             <p><strong>Location:</strong> ${internship.location || 'N/A'}</p>
                             <p><strong>Duration:</strong> ${internship.duration || 'N/A'}</p>
                             ${internship.stipend ? `<p><strong>Stipend:</strong> ${internship.stipend}</p>` : ''}
-                            ${internship.link ? `<p><a href="${internship.link}" target="_blank">Apply Now →</a></p>` : ''}
+                            ${internship.link ? `<p><a href="${internship.link}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #60A5FA, #A78BFA); color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; margin-top: 10px;">Apply Now →</a></p>` : ''}
                         </div>
                     `;
                 });
             }
             
-            // Generic result
+            // Generic message result
             else if (result.message) {
-                html += `<div class="result-item"><p>${result.message}</p></div>`;
+                html += `<div class="result-item"><p style="white-space: pre-wrap;">${result.message}</p></div>`;
             }
             
             // Raw result display
