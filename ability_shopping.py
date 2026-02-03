@@ -381,11 +381,33 @@ def shopping_assistant_task(query, user_profile=None):
                 "suggestion": "Try simpler terms like 'laptop', 'iPhone', 'headphones'"
             }
         
-        # Sort by price - cheapest first
-        all_products.sort(key=lambda x: x['price_numeric'])
+        # Calculate relevance scores for each product
+        def calculate_relevance_score(product, query):
+            """Calculate how well product matches search query"""
+            title_lower = product['title'].lower()
+            query_words = query.lower().split()
+            
+            score = 0
+            for word in query_words:
+                if len(word) > 2:  # Ignore short words like "of", "in"
+                    if word in title_lower:
+                        score += 1
+            
+            # Boost score if ALL query words present
+            if all(word in title_lower for word in query_words if len(word) > 2):
+                score += 5
+            
+            return score
+        
+        # Add relevance scores
+        for product in all_products:
+            product['relevance'] = calculate_relevance_score(product, product_query)
+        
+        # Sort by relevance first (highest first), then by price (lowest first)
+        all_products.sort(key=lambda x: (-x['relevance'], x['price_numeric']))
         
         print(f"\n✅ Found {len(all_products)} total products")
-        print(f"🎯 BEST DEAL: {all_products[0]['title'][:50]}... - {all_products[0]['price']} ({all_products[0]['site']})")
+        print(f"🎯 BEST MATCH: {all_products[0]['title'][:50]}... - {all_products[0]['price']} ({all_products[0]['site']}) [Relevance: {all_products[0]['relevance']}]")
         
         # Return TOP 5 products with proper format for frontend
         return {
