@@ -14,7 +14,6 @@
     <title>Login - Intelix</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
     <style>
-        /* Alert styling */
         .alert {
             position: fixed;
             top: 20px;
@@ -42,21 +41,11 @@
         }
         
         @keyframes slideIn {
-            from {
-                transform: translateX(400px);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
         
-        .alert-icon {
-            font-size: 24px;
-            margin-right: 10px;
-        }
-
+        .alert-icon { font-size: 24px; margin-right: 10px; }
         .debug-info {
             margin-top: 20px;
             padding: 15px;
@@ -65,6 +54,23 @@
             font-size: 12px;
             color: #94a3b8;
         }
+        
+        .password-wrapper { position: relative; }
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 20px;
+            padding: 5px;
+            color: #94a3b8;
+            transition: color 0.3s ease;
+        }
+        .password-toggle:hover { color: #60a5fa; }
+        .password-wrapper input { padding-right: 45px; }
     </style>
 </head>
 <body>
@@ -74,28 +80,25 @@
                 <h1>Welcome Back</h1>
                 <p>Login to access your AI agents</p>
             </div>
-
             <form id="loginForm" class="auth-form">
                 <div class="form-group">
                     <label for="username">Username</label>
                     <input type="text" id="username" name="username" required 
                            placeholder="Enter your username" autocomplete="username">
                 </div>
-
                 <div class="form-group">
                     <label for="password">Password</label>
-                    <input type="password" id="password" name="password" required 
-                           placeholder="Enter your password" autocomplete="current-password">
+                    <div class="password-wrapper">
+                        <input type="password" id="password" name="password" required 
+                               placeholder="Enter your password" autocomplete="current-password">
+                        <button type="button" class="password-toggle" id="togglePassword">👁️</button>
+                    </div>
                 </div>
-
                 <button type="submit" class="auth-btn">Login</button>
             </form>
-
             <div class="auth-footer">
                 <p>Don't have an account? <a href="/signup">Sign Up</a></p>
             </div>
-
-            <!-- Debug info (remove this later in production) -->
             <div class="debug-info" id="debugInfo" style="display: none;">
                 <strong>Debug Info:</strong><br>
                 Username entered: <span id="debugUsername"></span><br>
@@ -104,67 +107,46 @@
             </div>
         </div>
     </div>
-
     <script>
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+        togglePassword.addEventListener('click', function() {
+            const type = passwordInput.type === 'password' ? 'text' : 'password';
+            passwordInput.type = type;
+            this.textContent = type === 'password' ? '👁️' : '🙈';
+        });
         function showAlert(message, type) {
-            // Remove any existing alerts
             const existingAlert = document.querySelector('.alert');
-            if (existingAlert) {
-                existingAlert.remove();
-            }
-
-            // Create new alert
+            if (existingAlert) existingAlert.remove();
             const alert = document.createElement('div');
             alert.className = `alert alert-${type}`;
-            alert.innerHTML = `
-                <span class="alert-icon">${type === 'success' ? '✅' : '❌'}</span>
-                <span>${message}</span>
-            `;
+            alert.innerHTML = `<span class="alert-icon">${type === 'success' ? '✅' : '❌'}</span><span>${message}</span>`;
             document.body.appendChild(alert);
-
-            // Auto remove after 5 seconds
             setTimeout(() => {
                 alert.style.animation = 'slideIn 0.3s ease reverse';
                 setTimeout(() => alert.remove(), 300);
             }, 5000);
         }
-
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
-
-            // Show debug info (for testing)
             document.getElementById('debugInfo').style.display = 'block';
             document.getElementById('debugUsername').textContent = username;
             document.getElementById('debugPasswordLength').textContent = password.length + ' characters';
-
             try {
                 console.log('Attempting login with:', { username, passwordLength: password.length });
-
                 const response = await fetch('/login', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        username: username,
-                        password: password
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: username, password: password })
                 });
-
                 const data = await response.json();
-                
-                // Show debug response
                 document.getElementById('debugResponse').textContent = JSON.stringify(data);
                 console.log('Login response:', data);
-
                 if (data.success) {
                     showAlert('✅ Login successful! Redirecting...', 'success');
-                    setTimeout(() => {
-                        window.location.href = '/home';
-                    }, 1000);
+                    setTimeout(() => { window.location.href = '/home'; }, 1000);
                 } else {
                     showAlert('❌ ' + (data.message || 'Invalid username or password'), 'error');
                 }
@@ -177,4 +159,3 @@
     </script>
 </body>
 </html>
-
