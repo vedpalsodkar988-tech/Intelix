@@ -502,7 +502,7 @@
                 <input 
                     type="text" 
                     class="task-input" 
-                    placeholder="Enter your task..."
+                    placeholder="Try: Find wireless headphones under ₹2000"
                     id="taskInput"
                 >
                 <button class="run-task-btn" id="runTaskBtn">Run Task</button>
@@ -829,6 +829,47 @@
         document.getElementById('taskInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 document.getElementById('runTaskBtn').click();
+            }
+        });
+
+        // Rotating placeholder examples
+        const placeholderExamples = [
+            "Try: Find wireless headphones under ₹2000",
+            "Try: Find smart sunglasses",
+            "Try: Search software engineer jobs in Pune",
+            "Try: Find internships for web development",
+            "Try: Find gaming laptop under ₹60000",
+            "Try: Search data analyst jobs remote",
+            "Try: Find React developer internships in Bangalore",
+            "Try: Find bluetooth speaker under ₹1500",
+            "Try: Search Python developer jobs",
+            "Try: Find mechanical engineering internships"
+        ];
+
+        let currentPlaceholderIndex = 0;
+        const taskInput = document.getElementById('taskInput');
+
+        function rotatePlaceholder() {
+            // Only rotate if input is empty
+            if (taskInput.value === '') {
+                currentPlaceholderIndex = (currentPlaceholderIndex + 1) % placeholderExamples.length;
+                taskInput.placeholder = placeholderExamples[currentPlaceholderIndex];
+            }
+        }
+
+        // Rotate placeholder every 3 seconds
+        setInterval(rotatePlaceholder, 3000);
+
+        // Don't rotate when user is typing
+        taskInput.addEventListener('focus', () => {
+            if (taskInput.value === '') {
+                taskInput.placeholder = 'Type your task here...';
+            }
+        });
+
+        taskInput.addEventListener('blur', () => {
+            if (taskInput.value === '') {
+                taskInput.placeholder = placeholderExamples[currentPlaceholderIndex];
             }
         });
     </script>
