@@ -633,12 +633,15 @@
             const task = document.getElementById('taskInput').value.trim();
             if (task) {
                 // Track task start in Google Analytics
-                if (typeof gtag !== 'undefined') {
-                    gtag('event', 'task_started', {
-                        'event_category': 'Tasks',
-                        'event_label': task.substring(0, 50), // First 50 chars of task
-                        'value': 1
-                    });
+                try {
+                    if (window.gtag) {
+                        gtag('event', 'task_started', {
+                            event_category: 'Tasks',
+                            event_label: task.substring(0, 50)
+                        });
+                    }
+                } catch (e) {
+                    console.log('GA tracking error:', e);
                 }
                 
                 // Disable button during request
@@ -662,11 +665,15 @@
                 .then(data => {
                     if (data.limit_exceeded) {
                         // Track limit exceeded
-                        if (typeof gtag !== 'undefined') {
-                            gtag('event', 'limit_exceeded', {
-                                'event_category': 'Tasks',
-                                'event_label': 'Monthly limit reached'
-                            });
+                        try {
+                            if (window.gtag) {
+                                gtag('event', 'limit_exceeded', {
+                                    event_category: 'Tasks',
+                                    event_label: 'Monthly limit reached'
+                                });
+                            }
+                        } catch (e) {
+                            console.log('GA tracking error:', e);
                         }
                         
                         alert('⚠️ Monthly Limit Reached!\n\n' + data.message + '\n\nUpgrade to PRO for unlimited tasks!');
@@ -674,18 +681,21 @@
                         location.reload();
                     } else if (data.success) {
                         // Track successful task completion
-                        if (typeof gtag !== 'undefined') {
-                            // Detect task type
-                            let taskType = 'unknown';
-                            if (data.result && data.result.products) taskType = 'shopping';
-                            else if (data.result && data.result.jobs) taskType = 'job_search';
-                            else if (data.result && data.result.internships) taskType = 'internship_search';
-                            
-                            gtag('event', 'task_completed', {
-                                'event_category': 'Tasks',
-                                'event_label': taskType,
-                                'value': 1
-                            });
+                        try {
+                            if (window.gtag) {
+                                // Detect task type
+                                let taskType = 'unknown';
+                                if (data.result && data.result.products) taskType = 'shopping';
+                                else if (data.result && data.result.jobs) taskType = 'job_search';
+                                else if (data.result && data.result.internships) taskType = 'internship_search';
+                                
+                                gtag('event', 'task_completed', {
+                                    event_category: 'Tasks',
+                                    event_label: taskType
+                                });
+                            }
+                        } catch (e) {
+                            console.log('GA tracking error:', e);
                         }
                         
                         // Display results
@@ -705,11 +715,15 @@
                             });
                     } else {
                         // Track task failure
-                        if (typeof gtag !== 'undefined') {
-                            gtag('event', 'task_failed', {
-                                'event_category': 'Tasks',
-                                'event_label': data.message || 'Unknown error'
-                            });
+                        try {
+                            if (window.gtag) {
+                                gtag('event', 'task_failed', {
+                                    event_category: 'Tasks',
+                                    event_label: data.message || 'Unknown error'
+                                });
+                            }
+                        } catch (e) {
+                            console.log('GA tracking error:', e);
                         }
                         
                         resultsContent.innerHTML = '<div class="result-item"><h4>❌ Error</h4><p>' + (data.message || 'Task failed') + '</p></div>';
@@ -719,11 +733,15 @@
                     console.error('Error:', error);
                     
                     // Track network error
-                    if (typeof gtag !== 'undefined') {
-                        gtag('event', 'task_error', {
-                            'event_category': 'Tasks',
-                            'event_label': 'Network error'
-                        });
+                    try {
+                        if (window.gtag) {
+                            gtag('event', 'task_error', {
+                                event_category: 'Tasks',
+                                event_label: 'Network error'
+                            });
+                        }
+                    } catch (e) {
+                        console.log('GA tracking error:', e);
                     }
                     
                     resultsContent.innerHTML = '<div class="result-item"><h4>❌ Error</h4><p>Failed to run task. Please try again.</p></div>';
