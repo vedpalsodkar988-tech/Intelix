@@ -1,295 +1,210 @@
-import requests
 import os
 import re
+import requests
 from bs4 import BeautifulSoup
-from urllib.parse import quote_plus
-
-
-def scrape_with_scraperapi(url, api_key):
-    """Use ScraperAPI to bypass anti-bot protection"""
-    try:
-        scraperapi_url = 'http://api.scraperapi.com'
-        
-        params = {
-            'api_key': api_key,
-            'url': url,
-            'country_code': 'in'
-        }
-        
-        response = requests.get(scraperapi_url, params=params, timeout=60)
-        
-        if response.status_code == 200:
-            return response.text
-        else:
-            print(f"    ❌ ScraperAPI returned status {response.status_code}")
-            return None
-            
-    except Exception as e:
-        print(f"    ❌ ScraperAPI error: {e}")
-        return None
-
-
-def scrape_naukri_jobs(query, location, scraperapi_key):
-    """Scrape Naukri.com for jobs"""
-    print("  💼 Scraping Naukri.com...")
-    
-    try:
-        # Naukri search URL
-        search_url = f"https://www.naukri.com/{quote_plus(query)}-jobs-in-{quote_plus(location)}"
-        
-        print(f"    📡 Using ScraperAPI to fetch Naukri...")
-        html_content = scrape_with_scraperapi(search_url, scraperapi_key)
-        
-        if not html_content:
-            print(f"  ❌ Failed to get Naukri page")
-            return []
-        
-        soup = BeautifulSoup(html_content, 'html.parser')
-        jobs = []
-        
-        # Find job cards - Naukri uses article tags with specific class
-        job_cards = soup.find_all('article', class_='jobTuple')
-        if not job_cards:
-            job_cards = soup.find_all('div', class_='jobTuple')
-        
-        print(f"  ✅ Found {len(job_cards)} Naukri jobs")
-        
-        for card in job_cards[:5]:
-            try:
-                # Get job title
-                title_elem = card.find('a', class_='title') or card.find('a', class_='jobTitle')
-                if not title_elem:
-                    continue
-                
-                title = title_elem.get_text().strip()
-                if not title or len(title) < 5:
-                    continue
-                
-                # Get company name
-                company_elem = card.find('a', class_='subTitle') or card.find('div', class_='companyInfo')
-                company = company_elem.get_text().strip() if company_elem else "Company Not Listed"
-                
-                # Get location
-                loc_elem = card.find('li', class_='location') or card.find('span', class_='locWdth')
-                job_location = loc_elem.get_text().strip() if loc_elem else location
-                
-                # Get salary
-                salary_elem = card.find('li', class_='salary') or card.find('span', class_='salary')
-                salary = salary_elem.get_text().strip() if salary_elem else "Not Disclosed"
-                
-                # Get experience
-                exp_elem = card.find('li', class_='experience') or card.find('span', class_='expwdth')
-                experience = exp_elem.get_text().strip() if exp_elem else "Not Specified"
-                
-                # Get job link
-                link = title_elem.get('href', '')
-                if link and not link.startswith('http'):
-                    link = f"https://www.naukri.com{link}"
-                
-                if not link:
-                    continue
-                
-                # Get job snippet/description
-                snippet_elem = card.find('div', class_='jobDescription') or card.find('ul', class_='list')
-                snippet = snippet_elem.get_text().strip()[:200] if snippet_elem else "No description available"
-                
-                jobs.append({
-                    "title": title,
-                    "company": company,
-                    "location": job_location,
-                    "salary": salary,
-                    "experience": experience,
-                    "snippet": snippet,
-                    "link": link,
-                    "source": "Naukri.com"
-                })
-                
-                print(f"    ✓ Naukri: {title[:40]}... at {company}")
-                
-            except Exception as e:
-                print(f"    ✗ Error parsing Naukri job: {e}")
-                continue
-        
-        return jobs
-        
-    except Exception as e:
-        print(f"  ❌ Naukri scraping error: {e}")
-        import traceback
-        traceback.print_exc()
-        return []
-
-
-def scrape_indeed_jobs(query, location, scraperapi_key):
-    """Scrape Indeed India for jobs"""
-    print("  💼 Scraping Indeed India...")
-    
-    try:
-        # Indeed search URL
-        search_url = f"https://in.indeed.com/jobs?q={quote_plus(query)}&l={quote_plus(location)}"
-        
-        print(f"    📡 Using ScraperAPI to fetch Indeed...")
-        html_content = scrape_with_scraperapi(search_url, scraperapi_key)
-        
-        if not html_content:
-            print(f"  ❌ Failed to get Indeed page")
-            return []
-        
-        soup = BeautifulSoup(html_content, 'html.parser')
-        jobs = []
-        
-        # Find job cards - Indeed uses div with data-jk attribute
-        job_cards = soup.find_all('div', class_='job_seen_beacon')
-        if not job_cards:
-            job_cards = soup.find_all('td', class_='resultContent')
-        
-        print(f"  ✅ Found {len(job_cards)} Indeed jobs")
-        
-        for card in job_cards[:5]:
-            try:
-                # Get job title
-                title_elem = card.find('h2', class_='jobTitle') or card.find('a', class_='jcs-JobTitle')
-                if not title_elem:
-                    # Try finding any h2 or span with job title
-                    title_elem = card.find('h2') or card.find('span', {'title': True})
-                
-                if not title_elem:
-                    continue
-                
-                # Extract title text
-                title_link = title_elem.find('a') if title_elem.find('a') else title_elem
-                title = title_link.get_text().strip()
-                
-                if not title or len(title) < 5:
-                    continue
-                
-                # Get company name
-                company_elem = card.find('span', class_='companyName') or card.find('span', {'data-testid': 'company-name'})
-                company = company_elem.get_text().strip() if company_elem else "Company Not Listed"
-                
-                # Get location
-                loc_elem = card.find('div', class_='companyLocation')
-                job_location = loc_elem.get_text().strip() if loc_elem else location
-                
-                # Get salary
-                salary_elem = card.find('div', class_='salary-snippet')
-                salary = salary_elem.get_text().strip() if salary_elem else "Not Disclosed"
-                
-                # Get job link
-                link_elem = card.find('a', href=True)
-                link = link_elem.get('href', '') if link_elem else ''
-                
-                if link and not link.startswith('http'):
-                    link = f"https://in.indeed.com{link}"
-                
-                if not link:
-                    continue
-                
-                # Get job snippet
-                snippet_elem = card.find('div', class_='job-snippet') or card.find('ul')
-                snippet = snippet_elem.get_text().strip()[:200] if snippet_elem else "No description available"
-                
-                jobs.append({
-                    "title": title,
-                    "company": company,
-                    "location": job_location,
-                    "salary": salary,
-                    "snippet": snippet,
-                    "link": link,
-                    "source": "Indeed India"
-                })
-                
-                print(f"    ✓ Indeed: {title[:40]}... at {company}")
-                
-            except Exception as e:
-                print(f"    ✗ Error parsing Indeed job: {e}")
-                continue
-        
-        return jobs
-        
-    except Exception as e:
-        print(f"  ❌ Indeed scraping error: {e}")
-        import traceback
-        traceback.print_exc()
-        return []
-
 
 def jobsearch_task(query, user_profile=None):
-    """AI Job Search Assistant using ScraperAPI"""
-    print("💼 AI Job Search Starting (ScraperAPI)...")
-    print(f"Query: {query}")
+    """
+    AI Job Search Agent - Searches multiple job boards
+    FIXED: Now properly extracts job role from query
+    """
+    print(f"💼 AI Job Search Starting...")
+    print(f"Original query: {query}")
     
-    # Extract job title and location from query
-    query_lower = query.lower()
+    # CRITICAL FIX: Extract the actual role from the query
+    # Remove common words like "find", "search", "job", "jobs", etc.
+    clean_query = query.lower()
     
-    # Try to extract location from query
-    location = "India"
-    location_keywords = ['in ', ' at ', ' from ']
-    for keyword in location_keywords:
-        if keyword in query_lower:
-            parts = query_lower.split(keyword)
-            if len(parts) > 1:
-                location = parts[-1].strip()
-                query = parts[0].strip()
-                break
+    # Remove these words
+    remove_words = [
+        'find', 'search', 'get', 'show', 'looking for', 'look for',
+        'job', 'jobs', 'position', 'positions', 'for', 'in', 'at',
+        'give me', 'get me', 'i want', 'i need', 'opening', 'openings'
+    ]
     
-    # If user has profile, use their preferred location
-    if user_profile and user_profile.get('preferred_location'):
-        location = user_profile['preferred_location']
+    for word in remove_words:
+        clean_query = re.sub(r'\b' + word + r'\b', '', clean_query, flags=re.IGNORECASE)
     
-    # Clean the job title query
-    job_title = re.sub(r'\b(find|search|job|jobs|for|looking|need)\b', '', query.lower()).strip()
-    job_title = re.sub(r'\s+', ' ', job_title)
+    # Clean up extra spaces
+    clean_query = re.sub(r'\s+', ' ', clean_query).strip()
     
-    # If user has profile, use their preferred job title if query is generic
-    if user_profile and user_profile.get('preferred_job_title') and len(job_title) < 3:
-        job_title = user_profile['preferred_job_title']
+    # If query is now empty, use profile or default
+    if not clean_query:
+        if user_profile and user_profile.get('preferred_job_title'):
+            clean_query = user_profile['preferred_job_title']
+        else:
+            clean_query = "software engineer"
     
-    print(f"Searching for: '{job_title}' in '{location}'")
+    print(f"✅ Cleaned query for job boards: '{clean_query}'")
     
     # Get ScraperAPI key
     scraperapi_key = os.environ.get('SCRAPERAPI_KEY', '').strip()
     if not scraperapi_key:
-        print("❌ ERROR: SCRAPERAPI_KEY not found in environment variables!")
         return {"status": "error", "message": "ScraperAPI key not configured"}
-    
-    print(f"✅ ScraperAPI Key loaded")
     
     try:
         all_jobs = []
         
-        # Scrape Naukri
-        naukri_jobs = scrape_naukri_jobs(job_title, location, scraperapi_key)
+        # Search Naukri.com
+        print("🔍 Searching Naukri.com...")
+        naukri_jobs = scrape_naukri(clean_query, scraperapi_key)
         all_jobs.extend(naukri_jobs)
         
-        # Scrape Indeed
-        indeed_jobs = scrape_indeed_jobs(job_title, location, scraperapi_key)
+        # Search Indeed
+        print("🔍 Searching Indeed...")
+        indeed_jobs = scrape_indeed(clean_query, scraperapi_key)
         all_jobs.extend(indeed_jobs)
         
         if not all_jobs:
-            print("⚠️ No jobs found on Naukri or Indeed")
             return {
-                "status": "error", 
-                "message": f"No jobs found for '{job_title}' in '{location}'. Try different keywords.",
-                "suggestion": "Try broader terms like 'software developer', 'data analyst', 'marketing'"
+                "status": "error",
+                "message": f"No jobs found for '{clean_query}'. Try different keywords."
             }
         
-        # Sort by relevance (jobs with salary info first)
-        all_jobs.sort(key=lambda x: 0 if x['salary'] != 'Not Disclosed' else 1)
+        # Sort by relevance (if salary available, prefer those)
+        all_jobs.sort(key=lambda x: 1 if x.get('salary') else 0, reverse=True)
         
-        print(f"\n✅ Found {len(all_jobs)} total jobs")
-        print(f"🎯 TOP JOB: {all_jobs[0]['title'][:50]}... at {all_jobs[0]['company']}")
+        # Return TOP 5
+        top_jobs = all_jobs[:5]
+        
+        print(f"🎉 Found {len(all_jobs)} total jobs, returning TOP 5!")
         
         return {
             "status": "success",
-            "jobs": all_jobs[:5],  # Return top 5 jobs
+            "jobs": top_jobs,
             "total_found": len(all_jobs),
-            "query": job_title,
-            "location": location,
-            "message": f"🎉 Found {len(all_jobs)} jobs for '{job_title}' in '{location}'!"
+            "query": clean_query,
+            "message": f"💼 Found {len(top_jobs)} jobs for '{clean_query}'! Showing TOP 5:"
         }
         
     except Exception as e:
         print(f"❌ Error: {e}")
         import traceback
         traceback.print_exc()
-        return {"status": "error", "error": str(e)}
+        return {
+            "status": "error",
+            "message": f"Failed to search jobs: {str(e)}"
+        }
+
+
+def scrape_naukri(query, api_key):
+    """Scrape Naukri.com"""
+    jobs = []
+    try:
+        # Build Naukri URL
+        search_term = query.replace(' ', '-')
+        naukri_url = f"https://www.naukri.com/{search_term}-jobs"
+        
+        api_url = f"http://api.scraperapi.com?api_key={api_key}&url={naukri_url}"
+        response = requests.get(api_url, timeout=60)
+        
+        if response.status_code != 200:
+            print(f"⚠️ Naukri returned status: {response.status_code}")
+            return jobs
+        
+        soup = BeautifulSoup(response.content, 'html.parser')
+        
+        # Find job cards
+        job_cards = soup.find_all('article', class_='jobTuple')
+        
+        for card in job_cards[:3]:  # TOP 3 from Naukri
+            try:
+                title_elem = card.find('a', class_='title')
+                title = title_elem.get_text(strip=True) if title_elem else "Job"
+                
+                company_elem = card.find('a', class_='subTitle')
+                company = company_elem.get_text(strip=True) if company_elem else "Company"
+                
+                exp_elem = card.find('li', class_='experience')
+                experience = exp_elem.get_text(strip=True) if exp_elem else "N/A"
+                
+                salary_elem = card.find('li', class_='salary')
+                salary = salary_elem.get_text(strip=True) if salary_elem else None
+                
+                location_elem = card.find('li', class_='location')
+                location = location_elem.get_text(strip=True) if location_elem else "India"
+                
+                link_elem = card.find('a', class_='title')
+                link = "https://www.naukri.com" + link_elem['href'] if link_elem and link_elem.get('href') else None
+                
+                job = {
+                    "title": title,
+                    "company": company,
+                    "experience": experience,
+                    "salary": salary,
+                    "location": location,
+                    "link": link,
+                    "source": "Naukri"
+                }
+                
+                jobs.append(job)
+                print(f"✅ Naukri: {title} at {company}")
+                
+            except Exception as e:
+                print(f"⚠️ Error parsing Naukri job: {e}")
+                continue
+                
+    except Exception as e:
+        print(f"⚠️ Naukri scraping failed: {e}")
+    
+    return jobs
+
+
+def scrape_indeed(query, api_key):
+    """Scrape Indeed.co.in"""
+    jobs = []
+    try:
+        # Build Indeed URL
+        search_term = query.replace(' ', '+')
+        indeed_url = f"https://in.indeed.com/jobs?q={search_term}&l=India"
+        
+        api_url = f"http://api.scraperapi.com?api_key={api_key}&url={indeed_url}"
+        response = requests.get(api_url, timeout=60)
+        
+        if response.status_code != 200:
+            print(f"⚠️ Indeed returned status: {response.status_code}")
+            return jobs
+        
+        soup = BeautifulSoup(response.content, 'html.parser')
+        
+        # Find job cards
+        job_cards = soup.find_all('div', class_='job_seen_beacon') or soup.find_all('td', class_='resultContent')
+        
+        for card in job_cards[:2]:  # TOP 2 from Indeed
+            try:
+                title_elem = card.find('h2', class_='jobTitle') or card.find('a')
+                title = title_elem.get_text(strip=True) if title_elem else "Job"
+                
+                company_elem = card.find('span', class_='companyName')
+                company = company_elem.get_text(strip=True) if company_elem else "Company"
+                
+                location_elem = card.find('div', class_='companyLocation')
+                location = location_elem.get_text(strip=True) if location_elem else "India"
+                
+                salary_elem = card.find('div', class_='salary-snippet')
+                salary = salary_elem.get_text(strip=True) if salary_elem else None
+                
+                link_elem = card.find('a', class_='jcs-JobTitle')
+                link = "https://in.indeed.com" + link_elem['href'] if link_elem and link_elem.get('href') else None
+                
+                job = {
+                    "title": title,
+                    "company": company,
+                    "experience": "As per requirement",
+                    "salary": salary,
+                    "location": location,
+                    "link": link,
+                    "source": "Indeed"
+                }
+                
+                jobs.append(job)
+                print(f"✅ Indeed: {title} at {company}")
+                
+            except Exception as e:
+                print(f"⚠️ Error parsing Indeed job: {e}")
+                continue
+                
+    except Exception as e:
+        print(f"⚠️ Indeed scraping failed: {e}")
+    
+    return jobs
