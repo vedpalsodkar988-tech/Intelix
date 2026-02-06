@@ -148,7 +148,32 @@ def search_with_serpapi(query, location, api_key):
                 
                 # Try to extract salary
                 salary_elem = job_data.get('detected_extensions', {})
-                salary = salary_elem.get('salary') or salary_elem.get('posted_at') or "Not disclosed"
+                salary = salary_elem.get('salary') or "Not disclosed"
+                
+                # CRITICAL: Use apply_link (direct to job board) NOT share_link (goes to Google)
+                apply_links = job_data.get('apply_options', [])
+                direct_link = None
+                
+                # Try to get direct application link from apply_options
+                if apply_links:
+                    # Get the first apply option's link
+                    direct_link = apply_links[0].get('link')
+                
+                # Fallback to related_links if no apply_options
+                if not direct_link:
+                    related = job_data.get('related_links', [])
+                    for link_data in related:
+                        if link_data.get('link'):
+                            direct_link = link_data['link']
+                            break
+                
+                # Last resort: use share_link but warn it goes to Google
+                if not direct_link:
+                    direct_link = job_data.get('share_link')
+                
+                # Skip if no link at all
+                if not direct_link:
+                    continue
                 
                 job = {
                     "title": job_data.get('title', 'Job Opening'),
@@ -156,12 +181,12 @@ def search_with_serpapi(query, location, api_key):
                     "location": job_data.get('location', location),
                     "salary": salary,
                     "experience": job_type,
-                    "link": job_data.get('share_link') or job_data.get('apply_link'),
+                    "link": direct_link,
                     "source": job_data.get('via', 'Job Board')
                 }
                 
                 jobs.append(job)
-                print(f"✅ SerpAPI: {job['title']} at {job['company']}")
+                print(f"✅ SerpAPI: {job['title']} at {job['company']} -> {job['source']}")
                 
             except Exception as e:
                 print(f"⚠️ Error parsing SerpAPI job: {e}")
@@ -266,4 +291,3 @@ def search_with_scraperapi(query, location, api_key):
     except Exception as e:
         print(f"❌ ScraperAPI method failed: {e}")
         return jobs
-
