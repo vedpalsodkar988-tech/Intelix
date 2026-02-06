@@ -26,26 +26,28 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-this-in-production')
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
-# PostgreSQL connection - UPDATED FOR RENDER AUTO-CONNECTION
+# ============================================
+# DEVELOPER MODE - Unlimited tasks for VED!
+# ============================================
+DEVELOPER_ACCOUNTS = ['VED']
+
+# PostgreSQL connection
 def get_db_connection():
-    # Try DATABASE_URL first (Render's auto-generated), then INTELIX_DATABASE_URL
     database_url = os.environ.get('DATABASE_URL') or os.environ.get('INTELIX_DATABASE_URL')
     
     if not database_url:
-        raise ValueError("No database URL found! Make sure DATABASE_URL or INTELIX_DATABASE_URL is set in Render environment variables.")
+        raise ValueError("No database URL found!")
     
-    # Remove any whitespace
     database_url = database_url.strip()
     
-    # Fix for Render's postgres:// URL format (psycopg2 needs postgresql://)
     if database_url.startswith('postgres://'):
         database_url = database_url.replace('postgres://', 'postgresql://', 1)
     
-    print(f"🔗 Attempting to connect to database...") # Debug log
+    print(f"🔗 Attempting to connect to database...")
     
     try:
         conn = psycopg2.connect(database_url, cursor_factory=RealDictCursor)
-        print("✅ Database connected successfully!") # Debug log
+        print("✅ Database connected successfully!")
         return conn
     except Exception as e:
         print(f"❌ Database connection failed: {str(e)}")
@@ -57,7 +59,6 @@ def init_db():
         conn = get_db_connection()
         c = conn.cursor()
         
-        # Users table - UPDATED with subscription columns
         c.execute('''CREATE TABLE IF NOT EXISTS users
                      (id SERIAL PRIMARY KEY,
                       username TEXT UNIQUE NOT NULL,
@@ -67,7 +68,6 @@ def init_db():
                       subscription_expires TIMESTAMP,
                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
         
-        # Tasks table
         c.execute('''CREATE TABLE IF NOT EXISTS tasks
                      (id SERIAL PRIMARY KEY,
                       user_id INTEGER,
@@ -78,7 +78,6 @@ def init_db():
                       completed_at TIMESTAMP,
                       FOREIGN KEY(user_id) REFERENCES users(id))''')
         
-        # Profile data table
         c.execute('''CREATE TABLE IF NOT EXISTS profiles
                      (id SERIAL PRIMARY KEY,
                       user_id INTEGER UNIQUE,
@@ -99,12 +98,11 @@ def init_db():
                       expected_salary TEXT,
                       FOREIGN KEY(user_id) REFERENCES users(id))''')
         
-        # Add subscription columns to existing users if they don't have them
         try:
             c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription TEXT DEFAULT 'free'")
             c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_expires TIMESTAMP")
         except:
-            pass  # Columns already exist
+            pass
         
         print("✅ Database tables created successfully!")
         
@@ -116,23 +114,19 @@ def init_db():
 
 init_db()
 
-# RATE LIMITING FUNCTION - NEW!
 def check_user_limits(user_id):
     """Check if user has exceeded their monthly task limit"""
     conn = get_db_connection()
     c = conn.cursor()
     
-    # Get user subscription status
     c.execute('SELECT subscription FROM users WHERE id = %s', (user_id,))
     user = c.fetchone()
     subscription = user['subscription'] if user else 'free'
     
-    # PRO users have unlimited tasks
     if subscription == 'pro':
         conn.close()
         return {'allowed': True, 'remaining': 'Unlimited', 'subscription': 'pro'}
     
-    # Count tasks this month for FREE users
     first_day_of_month = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     
     c.execute('''
@@ -146,7 +140,6 @@ def check_user_limits(user_id):
     tasks_this_month = result['count'] if result else 0
     conn.close()
     
-    # FREE tier limit: 10 tasks per month
     FREE_LIMIT = 10
     remaining = FREE_LIMIT - tasks_this_month
     
@@ -158,7 +151,6 @@ def check_user_limits(user_id):
         'subscription': 'free'
     }
 
-# Abilities configuration - UPDATED
 ABILITIES = [
     {
         "id": 1,
@@ -203,7 +195,6 @@ ABILITIES = [
     }
 ]
 
-# Routes
 @app.route('/')
 def index():
     if 'user_id' in session:
@@ -255,7 +246,6 @@ def signup():
         email = data.get('email')
         password = data.get('password')
         
-        # Use method='pbkdf2:sha256' for consistent hashing
         hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
         
         try:
@@ -265,7 +255,6 @@ def signup():
                      (username, email, hashed_password, 'free'))
             conn.commit()
             
-            # Auto-login after signup
             c.execute('SELECT * FROM users WHERE username = %s', (username,))
             user = c.fetchone()
             conn.close()
@@ -376,7 +365,6 @@ def settings():
         return redirect(url_for('login'))
     return render_template('settings.html', username=session.get('username'))
 
-# NEW ROUTE - Check task limits
 @app.route('/check-limits')
 def check_limits():
     if 'user_id' not in session:
@@ -385,27 +373,33 @@ def check_limits():
     limit_check = check_user_limits(session['user_id'])
     return jsonify(limit_check)
 
-# UPDATED ROUTE - Run task with rate limiting
+# ============================================
+# MAIN TASK ROUTE WITH DEVELOPER MODE!
+# ============================================
 @app.route('/run-task', methods=['POST'])
 def run_task():
     if 'user_id' not in session:
         return jsonify({'success': False, 'message': 'Not logged in'})
     
-    # CHECK RATE LIMIT FIRST - NEW!
-    limit_check = check_user_limits(session['user_id'])
-    
-    if not limit_check['allowed']:
-        return jsonify({
-            'success': False,
-            'message': f'Monthly limit reached! You\'ve used all {limit_check["total"]} free tasks this month. Upgrade to PRO for unlimited tasks!',
-            'limit_exceeded': True,
-            'subscription': limit_check['subscription']
-        })
+    # DEVELOPER MODE CHECK - VED gets unlimited tasks!
+    if session.get('username') not in DEVELOPER_ACCOUNTS:
+        # Normal users: check limits
+        limit_check = check_user_limits(session['user_id'])
+        
+        if not limit_check['allowed']:
+            return jsonify({
+                'success': False,
+                'message': f'Monthly limit reached! You\'ve used all {limit_check["total"]} free tasks this month. Upgrade to PRO for unlimited tasks!',
+                'limit_exceeded': True,
+                'subscription': limit_check['subscription']
+            })
+    else:
+        # Developer mode active!
+        print(f"🔧 DEVELOPER MODE: {session.get('username')} has unlimited tasks!")
     
     data = request.json
     task_description = data.get('task')
     
-    # Save task to database
     conn = get_db_connection()
     c = conn.cursor()
     c.execute('INSERT INTO tasks (user_id, task_description, status) VALUES (%s, %s, %s) RETURNING id',
@@ -413,16 +407,13 @@ def run_task():
     task_id = c.fetchone()['id']
     conn.commit()
     
-    # Get user profile for form filling
     c.execute('SELECT * FROM profiles WHERE user_id = %s', (session['user_id'],))
     profile = c.fetchone()
     conn.close()
     
-    # Emit to websocket for real-time updates
     socketio.emit('task_started', {'task_id': task_id, 'description': task_description})
     
     try:
-        # Use ability4_brain to decide which ability to use
         plan = think_and_plan(task_description)
         ability_chosen = plan.get('ability')
         
@@ -430,7 +421,6 @@ def run_task():
         
         result = None
         
-        # Route to the correct ability
         if ability_chosen == 'shopping':
             socketio.emit('task_update', {'message': '🛒 Starting AI Shopping Assistant...'})
             result = shopping_assistant_task(task_description, user_profile=profile)
@@ -474,7 +464,6 @@ def run_task():
         else:
             result = {'status': 'error', 'message': 'No matching ability found'}
         
-        # Update database with result
         conn = get_db_connection()
         c = conn.cursor()
         c.execute('''UPDATE tasks 
@@ -490,7 +479,6 @@ def run_task():
         return jsonify({'success': True, 'task_id': task_id, 'result': result})
     
     except Exception as e:
-        # Handle errors
         conn = get_db_connection()
         c = conn.cursor()
         c.execute('UPDATE tasks SET status = %s, result = %s WHERE id = %s',
@@ -507,7 +495,6 @@ def logout():
     session.clear()
     return redirect(url_for('index'))
 
-# WebSocket events for real-time updates
 @socketio.on('connect')
 def handle_connect():
     print('Client connected')
