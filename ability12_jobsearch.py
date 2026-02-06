@@ -62,17 +62,17 @@ def jobsearch_task(query, user_profile=None):
         
         # Search Naukri via Google
         print("🔍 Searching Naukri via Google...")
-        naukri_jobs = search_via_google(clean_query, location, "naukri.com", serpapi_key)
+        naukri_jobs = search_via_google(clean_query, location, "naukri.com/job-listings", serpapi_key)
         all_jobs.extend(naukri_jobs)
         
         # Search LinkedIn via Google
         print("🔍 Searching LinkedIn via Google...")
-        linkedin_jobs = search_via_google(clean_query, location, "linkedin.com/jobs", serpapi_key)
+        linkedin_jobs = search_via_google(clean_query, location, "linkedin.com/jobs/view", serpapi_key)
         all_jobs.extend(linkedin_jobs)
         
         # Search Indeed via Google  
         print("🔍 Searching Indeed via Google...")
-        indeed_jobs = search_via_google(clean_query, location, "indeed.co.in", serpapi_key)
+        indeed_jobs = search_via_google(clean_query, location, "in.indeed.com/viewjob", serpapi_key)
         all_jobs.extend(indeed_jobs)
         
         if not all_jobs:
