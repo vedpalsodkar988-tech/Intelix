@@ -2,12 +2,11 @@ import os
 import re
 import requests
 from bs4 import BeautifulSoup
-import json
 
 def jobsearch_task(query, user_profile=None):
     """
-    AI Job Search - Uses Google Jobs Search
-    FAST & RELIABLE: Aggregates from all job boards!
+    AI Job Search - Uses SerpAPI (reliable) with ScraperAPI fallback
+    BEST OF BOTH WORLDS!
     """
     print(f"💼 AI Job Search Starting...")
     print(f"Original query: {query}")
@@ -25,10 +24,9 @@ def jobsearch_task(query, user_profile=None):
     for word in remove_words:
         clean_query = re.sub(r'\b' + word + r'\b', '', clean_query, flags=re.IGNORECASE)
     
-    # Clean up extra spaces
     clean_query = re.sub(r'\s+', ' ', clean_query).strip()
     
-    # Extract location if present
+    # Extract location
     location = "India"
     location_keywords = {
         'pune': 'Pune, India',
@@ -39,8 +37,6 @@ def jobsearch_task(query, user_profile=None):
         'hyderabad': 'Hyderabad, India',
         'chennai': 'Chennai, India',
         'kolkata': 'Kolkata, India',
-        'gurgaon': 'Gurgaon, India',
-        'noida': 'Noida, India',
         'remote': 'Remote, India'
     }
     
@@ -50,43 +46,52 @@ def jobsearch_task(query, user_profile=None):
             clean_query = clean_query.replace(keyword, '').strip()
             break
     
-    # If query is now empty, use default
     if not clean_query:
         clean_query = "software engineer"
     
-    print(f"✅ Searching Google Jobs for: '{clean_query}' in {location}")
-    
-    # Get ScraperAPI key
-    scraperapi_key = os.environ.get('SCRAPERAPI_KEY', '').strip()
-    if not scraperapi_key:
-        return {"status": "error", "message": "ScraperAPI key not configured"}
+    print(f"✅ Searching for: '{clean_query}' in {location}")
     
     try:
-        jobs = search_google_jobs(clean_query, location, scraperapi_key)
+        # METHOD 1: Try SerpAPI first (reliable!)
+        serpapi_key = os.environ.get('SERPAPI_KEY', '').strip()
         
-        if not jobs:
-            print("⚠️ No jobs found, trying broader search...")
-            # Try with just the first word
-            jobs = search_google_jobs(clean_query.split()[0], location, scraperapi_key)
+        if serpapi_key:
+            print("🔍 Using SerpAPI (premium method)...")
+            jobs = search_with_serpapi(clean_query, location, serpapi_key)
+            
+            if jobs:
+                print(f"✅ SerpAPI returned {len(jobs)} jobs!")
+                return {
+                    "status": "success",
+                    "jobs": jobs[:5],
+                    "total_found": len(jobs),
+                    "query": clean_query,
+                    "location": location,
+                    "message": f"💼 Found {min(5, len(jobs))} jobs for '{clean_query}'!"
+                }
+        
+        # METHOD 2: Fallback to ScraperAPI
+        print("🔄 Falling back to ScraperAPI method...")
+        scraperapi_key = os.environ.get('SCRAPERAPI_KEY', '').strip()
+        
+        if not scraperapi_key:
+            return {"status": "error", "message": "Search service not configured"}
+        
+        jobs = search_with_scraperapi(clean_query, location, scraperapi_key)
         
         if not jobs:
             return {
                 "status": "error",
-                "message": f"No jobs found for '{clean_query}' in {location}. Try different keywords."
+                "message": f"No jobs found for '{clean_query}' in {location}. Try different keywords like 'software engineer', 'data analyst', 'marketing manager'."
             }
-        
-        # Return TOP 5 jobs
-        top_jobs = jobs[:5]
-        
-        print(f"🎉 Returning {len(top_jobs)} jobs!")
         
         return {
             "status": "success",
-            "jobs": top_jobs,
+            "jobs": jobs[:5],
             "total_found": len(jobs),
             "query": clean_query,
             "location": location,
-            "message": f"💼 Found {len(top_jobs)} jobs for '{clean_query}' in {location}!"
+            "message": f"💼 Found {len(jobs[:5])} jobs for '{clean_query}'!"
         }
         
     except Exception as e:
@@ -95,111 +100,170 @@ def jobsearch_task(query, user_profile=None):
         traceback.print_exc()
         return {
             "status": "error",
-            "message": f"Job search failed. Please try again with different keywords."
+            "message": "Job search temporarily unavailable. Please try again."
         }
 
 
-def search_google_jobs(query, location, api_key):
+def search_with_serpapi(query, location, api_key):
     """
-    Search jobs using Google Jobs
-    Google aggregates jobs from Naukri, Indeed, LinkedIn, etc.
+    Search using SerpAPI - Most reliable method!
     """
     jobs = []
     
     try:
-        # Build Google Jobs search URL
-        search_query = f"{query} jobs in {location}"
-        google_url = f"https://www.google.com/search?q={search_query.replace(' ', '+')}&ibp=htl;jobs"
+        # SerpAPI endpoint for Google Jobs
+        url = "https://serpapi.com/search"
         
-        print(f"🔍 Google Jobs URL: {google_url}")
+        params = {
+            'engine': 'google_jobs',
+            'q': f"{query} {location}",
+            'api_key': api_key,
+            'hl': 'en',
+            'gl': 'in'
+        }
         
-        # Use ScraperAPI
-        api_url = f"http://api.scraperapi.com?api_key={api_key}&url={google_url}"
+        print(f"📡 Calling SerpAPI for '{query}' in {location}...")
         
-        response = requests.get(api_url, timeout=30)
+        response = requests.get(url, params=params, timeout=15)
         
         if response.status_code != 200:
-            print(f"⚠️ Google Jobs returned status: {response.status_code}")
+            print(f"⚠️ SerpAPI status: {response.status_code}")
             return jobs
         
-        soup = BeautifulSoup(response.content, 'html.parser')
+        data = response.json()
         
-        # Google Jobs uses specific structure
-        # Look for job listing divs
-        job_cards = soup.find_all('div', class_='PwjeAc')
+        # Check if we hit the limit
+        if 'error' in data:
+            print(f"⚠️ SerpAPI error: {data['error']}")
+            return jobs
         
-        if not job_cards:
-            # Try alternative selectors
-            job_cards = soup.find_all('li', class_='iFjolb')
+        # Extract jobs from response
+        jobs_data = data.get('jobs_results', [])
         
-        if not job_cards:
-            # Try finding all divs with job-related data
-            job_cards = soup.find_all('div', attrs={'data-job-id': True})
-        
-        print(f"📋 Found {len(job_cards)} job cards")
-        
-        for card in job_cards[:10]:  # Process up to 10
+        for job_data in jobs_data[:10]:
             try:
-                # Extract job title
-                title_elem = (
-                    card.find('div', class_='BjJfJf') or
-                    card.find('h2') or
-                    card.find('div', role='heading')
-                )
-                title = title_elem.get_text(strip=True) if title_elem else query.title()
+                # Extract extensions (location, type, etc)
+                extensions = job_data.get('extensions', [])
+                job_type = ', '.join(extensions) if extensions else "Full-time"
                 
-                # Extract company
-                company_elem = (
-                    card.find('div', class_='vNEEBe') or
-                    card.find('div', class_='nJlQNd')
-                )
-                company = company_elem.get_text(strip=True) if company_elem else "Company"
-                
-                # Extract location  
-                location_elem = card.find('div', class_='Qk80Jf')
-                job_location = location_elem.get_text(strip=True) if location_elem else location
-                
-                # Extract via (source)
-                via_elem = card.find('div', class_='LEwnzc')
-                source = via_elem.get_text(strip=True).replace('via ', '') if via_elem else "Job Board"
-                
-                # Try to get apply link
-                link_elem = card.find('a', href=True)
-                link = None
-                if link_elem:
-                    href = link_elem['href']
-                    if href.startswith('http'):
-                        link = href
-                    elif href.startswith('/url?q='):
-                        # Extract actual URL from Google redirect
-                        link = href.split('/url?q=')[1].split('&')[0]
-                
-                # If no link, create a Google search link for this specific job
-                if not link:
-                    job_search = f"{title} {company} {job_location}".replace(' ', '+')
-                    link = f"https://www.google.com/search?q={job_search}+apply"
+                # Try to extract salary
+                salary_elem = job_data.get('detected_extensions', {})
+                salary = salary_elem.get('salary') or salary_elem.get('posted_at') or "Not disclosed"
                 
                 job = {
-                    "title": title,
-                    "company": company,
-                    "location": job_location,
-                    "salary": "Not disclosed",
-                    "experience": "Refer to JD",
-                    "link": link,
-                    "source": source
+                    "title": job_data.get('title', 'Job Opening'),
+                    "company": job_data.get('company_name', 'Company'),
+                    "location": job_data.get('location', location),
+                    "salary": salary,
+                    "experience": job_type,
+                    "link": job_data.get('share_link') or job_data.get('apply_link'),
+                    "source": job_data.get('via', 'Job Board')
                 }
                 
                 jobs.append(job)
-                print(f"✅ {title} at {company} via {source}")
+                print(f"✅ SerpAPI: {job['title']} at {job['company']}")
                 
             except Exception as e:
-                print(f"⚠️ Error parsing job card: {e}")
+                print(f"⚠️ Error parsing SerpAPI job: {e}")
                 continue
         
         return jobs
         
     except Exception as e:
-        print(f"❌ Google Jobs search failed: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"❌ SerpAPI failed: {e}")
         return jobs
+
+
+def search_with_scraperapi(query, location, api_key):
+    """
+    Fallback: Search using ScraperAPI
+    """
+    jobs = []
+    
+    try:
+        # Use simple Naukri search
+        search_term = query.replace(' ', '-')
+        naukri_url = f"https://www.naukri.com/{search_term}-jobs"
+        
+        print(f"🔍 Scraping Naukri: {naukri_url}")
+        
+        api_url = f"http://api.scraperapi.com?api_key={api_key}&url={naukri_url}"
+        response = requests.get(api_url, timeout=45)
+        
+        if response.status_code != 200:
+            print(f"⚠️ Naukri status: {response.status_code}")
+            return jobs
+        
+        soup = BeautifulSoup(response.content, 'html.parser')
+        
+        # Find job cards with multiple selectors
+        job_cards = (
+            soup.find_all('article', class_='jobTuple') or
+            soup.find_all('div', class_='srp-jobtuple-wrapper') or
+            soup.find_all('div', class_='jobTupleHeader')
+        )
+        
+        print(f"📋 Found {len(job_cards)} job cards on Naukri")
+        
+        for card in job_cards[:10]:
+            try:
+                # Title - try multiple selectors
+                title_elem = (
+                    card.find('a', class_='title') or
+                    card.find('a', class_='job-title') or
+                    card.find('h2')
+                )
+                
+                if not title_elem:
+                    continue
+                
+                title = title_elem.get_text(strip=True)
+                
+                # Company
+                company_elem = (
+                    card.find('a', class_='subTitle') or
+                    card.find('div', class_='companyInfo')
+                )
+                company = company_elem.get_text(strip=True) if company_elem else "Company"
+                
+                # Experience
+                exp_elem = card.find('li', class_='experience')
+                experience = exp_elem.get_text(strip=True) if exp_elem else "0-3 years"
+                
+                # Salary
+                sal_elem = card.find('li', class_='salary')
+                salary = sal_elem.get_text(strip=True) if sal_elem else "Not disclosed"
+                
+                # Location
+                loc_elem = card.find('li', class_='location')
+                job_location = loc_elem.get_text(strip=True) if loc_elem else location
+                
+                # Link
+                link = None
+                if title_elem and title_elem.get('href'):
+                    href = title_elem['href']
+                    link = href if href.startswith('http') else f"https://www.naukri.com{href}"
+                
+                job = {
+                    "title": title,
+                    "company": company,
+                    "location": job_location,
+                    "salary": salary,
+                    "experience": experience,
+                    "link": link,
+                    "source": "Naukri"
+                }
+                
+                jobs.append(job)
+                print(f"✅ Naukri: {title} at {company}")
+                
+            except Exception as e:
+                print(f"⚠️ Error parsing Naukri job: {e}")
+                continue
+        
+        return jobs
+        
+    except Exception as e:
+        print(f"❌ ScraperAPI method failed: {e}")
+        return jobs
+
