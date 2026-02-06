@@ -5,8 +5,8 @@ from bs4 import BeautifulSoup
 
 def jobsearch_task(query, user_profile=None):
     """
-    AI Job Search - Uses SerpAPI (reliable) with ScraperAPI fallback
-    BEST OF BOTH WORLDS!
+    AI Job Search - Scrapes Naukri directly for REAL job links
+    NO MORE GOOGLE REDIRECTS!
     """
     print(f"💼 AI Job Search Starting...")
     print(f"Original query: {query}")
@@ -27,17 +27,17 @@ def jobsearch_task(query, user_profile=None):
     clean_query = re.sub(r'\s+', ' ', clean_query).strip()
     
     # Extract location
-    location = "India"
+    location = None
     location_keywords = {
-        'pune': 'Pune, India',
-        'mumbai': 'Mumbai, India',
-        'bangalore': 'Bangalore, India',
-        'bengaluru': 'Bangalore, India',
-        'delhi': 'Delhi, India',
-        'hyderabad': 'Hyderabad, India',
-        'chennai': 'Chennai, India',
-        'kolkata': 'Kolkata, India',
-        'remote': 'Remote, India'
+        'pune': 'Pune',
+        'mumbai': 'Mumbai',
+        'bangalore': 'Bangalore',
+        'bengaluru': 'Bangalore',
+        'delhi': 'Delhi',
+        'hyderabad': 'Hyderabad',
+        'chennai': 'Chennai',
+        'kolkata': 'Kolkata',
+        'remote': 'Remote'
     }
     
     for keyword, city in location_keywords.items():
@@ -49,40 +49,22 @@ def jobsearch_task(query, user_profile=None):
     if not clean_query:
         clean_query = "software engineer"
     
-    print(f"✅ Searching for: '{clean_query}' in {location}")
+    print(f"✅ Searching Naukri for: '{clean_query}'" + (f" in {location}" if location else ""))
+    
+    # Get API keys
+    scraperapi_key = os.environ.get('SCRAPERAPI_KEY', '').strip()
+    
+    if not scraperapi_key:
+        return {"status": "error", "message": "Search service not configured"}
     
     try:
-        # METHOD 1: Try SerpAPI first (reliable!)
-        serpapi_key = os.environ.get('SERPAPI_KEY', '').strip()
-        
-        if serpapi_key:
-            print("🔍 Using SerpAPI (premium method)...")
-            jobs = search_with_serpapi(clean_query, location, serpapi_key)
-            
-            if jobs:
-                print(f"✅ SerpAPI returned {len(jobs)} jobs!")
-                return {
-                    "status": "success",
-                    "jobs": jobs[:5],
-                    "total_found": len(jobs),
-                    "query": clean_query,
-                    "location": location,
-                    "message": f"💼 Found {min(5, len(jobs))} jobs for '{clean_query}'!"
-                }
-        
-        # METHOD 2: Fallback to ScraperAPI
-        print("🔄 Falling back to ScraperAPI method...")
-        scraperapi_key = os.environ.get('SCRAPERAPI_KEY', '').strip()
-        
-        if not scraperapi_key:
-            return {"status": "error", "message": "Search service not configured"}
-        
-        jobs = search_with_scraperapi(clean_query, location, scraperapi_key)
+        # Scrape Naukri directly with BETTER selectors
+        jobs = scrape_naukri_better(clean_query, location, scraperapi_key)
         
         if not jobs:
             return {
                 "status": "error",
-                "message": f"No jobs found for '{clean_query}' in {location}. Try different keywords like 'software engineer', 'data analyst', 'marketing manager'."
+                "message": f"No jobs found for '{clean_query}'. Try keywords like 'software engineer', 'data analyst', 'marketing manager'."
             }
         
         return {
@@ -90,7 +72,7 @@ def jobsearch_task(query, user_profile=None):
             "jobs": jobs[:5],
             "total_found": len(jobs),
             "query": clean_query,
-            "location": location,
+            "location": location or "India",
             "message": f"💼 Found {len(jobs[:5])} jobs for '{clean_query}'!"
         }
         
@@ -104,170 +86,122 @@ def jobsearch_task(query, user_profile=None):
         }
 
 
-def search_with_serpapi(query, location, api_key):
+def scrape_naukri_better(query, location, api_key):
     """
-    Search using SerpAPI - Most reliable method!
-    """
-    jobs = []
-    
-    try:
-        # SerpAPI endpoint for Google Jobs
-        url = "https://serpapi.com/search"
-        
-        params = {
-            'engine': 'google_jobs',
-            'q': f"{query} {location}",
-            'api_key': api_key,
-            'hl': 'en',
-            'gl': 'in'
-        }
-        
-        print(f"📡 Calling SerpAPI for '{query}' in {location}...")
-        
-        response = requests.get(url, params=params, timeout=15)
-        
-        if response.status_code != 200:
-            print(f"⚠️ SerpAPI status: {response.status_code}")
-            return jobs
-        
-        data = response.json()
-        
-        # Check if we hit the limit
-        if 'error' in data:
-            print(f"⚠️ SerpAPI error: {data['error']}")
-            return jobs
-        
-        # Extract jobs from response
-        jobs_data = data.get('jobs_results', [])
-        
-        for job_data in jobs_data[:10]:
-            try:
-                # Extract extensions (location, type, etc)
-                extensions = job_data.get('extensions', [])
-                job_type = ', '.join(extensions) if extensions else "Full-time"
-                
-                # Try to extract salary
-                salary_elem = job_data.get('detected_extensions', {})
-                salary = salary_elem.get('salary') or "Not disclosed"
-                
-                # CRITICAL: Use apply_link (direct to job board) NOT share_link (goes to Google)
-                apply_links = job_data.get('apply_options', [])
-                direct_link = None
-                
-                # Try to get direct application link from apply_options
-                if apply_links:
-                    # Get the first apply option's link
-                    direct_link = apply_links[0].get('link')
-                
-                # Fallback to related_links if no apply_options
-                if not direct_link:
-                    related = job_data.get('related_links', [])
-                    for link_data in related:
-                        if link_data.get('link'):
-                            direct_link = link_data['link']
-                            break
-                
-                # Last resort: use share_link but warn it goes to Google
-                if not direct_link:
-                    direct_link = job_data.get('share_link')
-                
-                # Skip if no link at all
-                if not direct_link:
-                    continue
-                
-                job = {
-                    "title": job_data.get('title', 'Job Opening'),
-                    "company": job_data.get('company_name', 'Company'),
-                    "location": job_data.get('location', location),
-                    "salary": salary,
-                    "experience": job_type,
-                    "link": direct_link,
-                    "source": job_data.get('via', 'Job Board')
-                }
-                
-                jobs.append(job)
-                print(f"✅ SerpAPI: {job['title']} at {job['company']} -> {job['source']}")
-                
-            except Exception as e:
-                print(f"⚠️ Error parsing SerpAPI job: {e}")
-                continue
-        
-        return jobs
-        
-    except Exception as e:
-        print(f"❌ SerpAPI failed: {e}")
-        return jobs
-
-
-def search_with_scraperapi(query, location, api_key):
-    """
-    Fallback: Search using ScraperAPI
+    Scrape Naukri with BETTER method - gets REAL job links!
     """
     jobs = []
     
     try:
-        # Use simple Naukri search
+        # Build Naukri search URL
         search_term = query.replace(' ', '-')
-        naukri_url = f"https://www.naukri.com/{search_term}-jobs"
         
-        print(f"🔍 Scraping Naukri: {naukri_url}")
+        if location:
+            # With location
+            location_term = location.lower().replace(' ', '-')
+            naukri_url = f"https://www.naukri.com/{search_term}-jobs-in-{location_term}"
+        else:
+            # Without location
+            naukri_url = f"https://www.naukri.com/{search_term}-jobs"
         
-        api_url = f"http://api.scraperapi.com?api_key={api_key}&url={naukri_url}"
-        response = requests.get(api_url, timeout=45)
+        print(f"🔍 Naukri URL: {naukri_url}")
+        
+        # Use ScraperAPI with premium features
+        api_url = f"http://api.scraperapi.com?api_key={api_key}&url={naukri_url}&render=false"
+        
+        print("⏳ Fetching jobs from Naukri...")
+        response = requests.get(api_url, timeout=30)
         
         if response.status_code != 200:
-            print(f"⚠️ Naukri status: {response.status_code}")
+            print(f"⚠️ Naukri returned status: {response.status_code}")
             return jobs
         
         soup = BeautifulSoup(response.content, 'html.parser')
         
-        # Find job cards with multiple selectors
-        job_cards = (
-            soup.find_all('article', class_='jobTuple') or
-            soup.find_all('div', class_='srp-jobtuple-wrapper') or
-            soup.find_all('div', class_='jobTupleHeader')
-        )
+        # MULTIPLE SELECTOR STRATEGIES
         
-        print(f"📋 Found {len(job_cards)} job cards on Naukri")
+        # Strategy 1: Look for article tags with jobTuple class
+        job_cards = soup.find_all('article', class_='jobTuple')
         
-        for card in job_cards[:10]:
+        if not job_cards:
+            # Strategy 2: Look for divs with specific data attributes
+            job_cards = soup.find_all('div', attrs={'data-job-id': True})
+        
+        if not job_cards:
+            # Strategy 3: Look for job tuple wrappers
+            job_cards = soup.find_all('div', class_='srp-jobtuple-wrapper')
+        
+        if not job_cards:
+            # Strategy 4: Find any article tags
+            job_cards = soup.find_all('article')
+        
+        print(f"📋 Found {len(job_cards)} potential job cards")
+        
+        for card in job_cards[:15]:  # Process more to ensure we get 5 good ones
             try:
-                # Title - try multiple selectors
-                title_elem = (
-                    card.find('a', class_='title') or
-                    card.find('a', class_='job-title') or
-                    card.find('h2')
-                )
+                # Extract title - MULTIPLE ATTEMPTS
+                title_elem = None
+                title_selectors = [
+                    ('a', {'class': 'title'}),
+                    ('a', {'class': 'job-title'}),
+                    ('h2', {}),
+                    ('a', {'title': True}),
+                    ('div', {'class': 'title'})
+                ]
+                
+                for tag, attrs in title_selectors:
+                    title_elem = card.find(tag, attrs)
+                    if title_elem:
+                        break
                 
                 if not title_elem:
                     continue
                 
                 title = title_elem.get_text(strip=True)
                 
-                # Company
-                company_elem = (
-                    card.find('a', class_='subTitle') or
-                    card.find('div', class_='companyInfo')
-                )
+                # Skip if title is too short or generic
+                if len(title) < 5:
+                    continue
+                
+                # Extract link - CRITICAL!
+                link = None
+                if title_elem.get('href'):
+                    href = title_elem['href']
+                    if href.startswith('http'):
+                        link = href
+                    elif href.startswith('/'):
+                        link = f"https://www.naukri.com{href}"
+                
+                # Skip if no proper link
+                if not link or 'naukri.com' not in link:
+                    continue
+                
+                # Extract company
+                company_elem = None
+                company_selectors = [
+                    ('a', {'class': 'subTitle'}),
+                    ('div', {'class': 'companyInfo'}),
+                    ('span', {'class': 'comp-name'})
+                ]
+                
+                for tag, attrs in company_selectors:
+                    company_elem = card.find(tag, attrs)
+                    if company_elem:
+                        break
+                
                 company = company_elem.get_text(strip=True) if company_elem else "Company"
                 
-                # Experience
-                exp_elem = card.find('li', class_='experience')
+                # Extract experience
+                exp_elem = card.find('li', class_='experience') or card.find('span', class_='expwdth')
                 experience = exp_elem.get_text(strip=True) if exp_elem else "0-3 years"
                 
-                # Salary
-                sal_elem = card.find('li', class_='salary')
+                # Extract salary
+                sal_elem = card.find('li', class_='salary') or card.find('span', class_='sal')
                 salary = sal_elem.get_text(strip=True) if sal_elem else "Not disclosed"
                 
-                # Location
-                loc_elem = card.find('li', class_='location')
-                job_location = loc_elem.get_text(strip=True) if loc_elem else location
-                
-                # Link
-                link = None
-                if title_elem and title_elem.get('href'):
-                    href = title_elem['href']
-                    link = href if href.startswith('http') else f"https://www.naukri.com{href}"
+                # Extract location
+                loc_elem = card.find('li', class_='location') or card.find('span', class_='loc')
+                job_location = loc_elem.get_text(strip=True) if loc_elem else (location or "India")
                 
                 job = {
                     "title": title,
@@ -280,14 +214,20 @@ def search_with_scraperapi(query, location, api_key):
                 }
                 
                 jobs.append(job)
-                print(f"✅ Naukri: {title} at {company}")
+                print(f"✅ {title} at {company} -> {link[:50]}...")
+                
+                # Stop once we have enough jobs
+                if len(jobs) >= 5:
+                    break
                 
             except Exception as e:
-                print(f"⚠️ Error parsing Naukri job: {e}")
+                print(f"⚠️ Error parsing job card: {e}")
                 continue
         
         return jobs
         
     except Exception as e:
-        print(f"❌ ScraperAPI method failed: {e}")
+        print(f"❌ Naukri scraping failed: {e}")
+        import traceback
+        traceback.print_exc()
         return jobs
