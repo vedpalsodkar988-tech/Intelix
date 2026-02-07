@@ -162,18 +162,28 @@ def search_via_google(query, location, site, api_key):
                 if not link or site not in link:
                     continue
                 
-                # Parse title: "Python Developer - TCS - Bangalore"
+                # SMART PARSING with city detection
+                INDIAN_CITIES = ['pune', 'mumbai', 'bangalore', 'bengaluru', 'delhi', 'ncr', 
+                                'hyderabad', 'chennai', 'kolkata', 'ahmedabad', 'gurgaon', 
+                                'noida', 'kochi', 'jaipur', 'chandigarh', 'indore', 'remote']
+                
                 company = "Company"
                 job_location = location or "India"
                 job_title = title
                 
                 if ' - ' in title:
-                    parts = title.split(' - ')
-                    job_title = parts[0].strip()
-                    if len(parts) >= 2:
-                        company = parts[1].strip()
-                    if len(parts) >= 3:
-                        job_location = parts[2].strip()
+                    parts = [p.strip() for p in title.split(' - ')]
+                    job_title = parts[0]  # First part is always job title
+                    
+                    # Identify cities vs companies
+                    for part in parts[1:]:
+                        part_lower = part.lower()
+                        # Check if it's a city
+                        if any(city in part_lower for city in INDIAN_CITIES):
+                            job_location = part
+                        # Otherwise it's a company
+                        elif company == "Company":
+                            company = part
                 
                 # Source
                 if 'naukri.com' in link:
@@ -190,7 +200,7 @@ def search_via_google(query, location, site, api_key):
                     "company": company,
                     "location": job_location,
                     "salary": "Not disclosed",
-                    "experience": "Refer to JD",
+                    "experience": "Check job details",
                     "link": link,
                     "source": source
                 }
