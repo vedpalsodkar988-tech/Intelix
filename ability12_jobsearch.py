@@ -190,11 +190,14 @@ def search_via_google(query, location, site, api_key):
     jobs = []
     
     try:
-        # Build Google query with LOCATION in query for better results
+        # Build Google query with LOCATION and exclude expired
         google_query = f'"{query}"'
         
         if location:
-            google_query += f' "{location}"'  # Force location in results!
+            google_query += f' "{location}"'
+        
+        # EXCLUDE EXPIRED JOBS!
+        google_query += ' -expired -"job expired" -"no longer available"'
         
         google_query += f' site:{site}'
         
@@ -241,8 +244,16 @@ def search_via_google(query, location, site, api_key):
                 if not link or site not in link:
                     continue
                 
+                # SKIP EXPIRED JOBS!
+                snippet_lower = snippet.lower()
+                link_lower = link.lower()
+                
+                if any(word in snippet_lower or word in link_lower for word in ['expired', 'no longer', 'not available', 'removed', 'closed']):
+                    print(f"⏭️  Skipped expired job: {title}")
+                    continue
+                
                 # SMART PARSING
-                company = "Company"
+                company = None  # Start with None instead of "Company"
                 job_location = location or "India"
                 job_title = title
                 
@@ -255,8 +266,43 @@ def search_via_google(query, location, site, api_key):
                         part_lower = part.lower()
                         if any(city in part_lower for city in INDIAN_CITIES):
                             job_location = part
-                        elif company == "Company":
+                        elif not company:  # First non-city part is company
                             company = part
+                
+                # BETTER COMPANY EXTRACTION from snippet
+                if not company or company == "Company":
+                    # Try to find company in snippet
+                    company_patterns = [
+                        r'at\s+([A-Z][A-Za-z\s&\.]+?)(?:\s+in\s|\s+is\s|\s+-\s|\.|\,)',  # "at TCS in"
+                        r'by\s+([A-Z][A-Za-z\s&\.]+?)(?:\s+in\s|\s+is\s|\s+-\s|\.|\,)',  # "by Infosys"
+                        r'([A-Z][A-Za-z\s&\.]+?)\s+is\s+hiring',  # "TCS is hiring"
+                        r'join\s+([A-Z][A-Za-z\s&\.]+?)(?:\s+as\s|\s+in\s|\.|\,)',  # "Join TCS as"
+                    ]
+                    
+                    for pattern in company_patterns:
+                        match = re.search(pattern, snippet)
+                        if match:
+                            potential_company = match.group(1).strip()
+                            # Make sure it's not a city or generic word
+                            if (potential_company.lower() not in INDIAN_CITIES and 
+                                potential_company.lower() not in ['company', 'the', 'a', 'an', 'this']):
+                                company = potential_company
+                                break
+                
+                # Extract company from domain as last resort
+                if not company:
+                    # For naukri/indeed/linkedin, try to get from URL
+                    if 'naukri.com' in link:
+                        # Naukri URLs sometimes have company: /job-listings-SOFTWARE-ENGINEER-TCS-...
+                        url_parts = link.split('-')
+                        for i, part in enumerate(url_parts):
+                            if part.isupper() and len(part) > 2 and i > 2:  # Company names are usually uppercase
+                                company = part.replace('-', ' ').title()
+                                break
+                
+                # Final fallback
+                if not company:
+                    company = "View job for details"
                 
                 # EXTRACT SALARY from snippet or title
                 salary = "Not disclosed"
@@ -304,7 +350,7 @@ def search_via_google(query, location, site, api_key):
                     if match:
                         if 'fresher' in pattern:
                             experience = "Fresher"
-                        elif match.group(2) if 'group(2)' in str(match.groups()) else False:
+                        elif match.group(2) if len(match.groups()) > 1 else False:
                             experience = f"{match.group(1)}-{match.group(2)} years"
                         else:
                             experience = f"{match.group(1)}+ years"
