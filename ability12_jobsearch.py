@@ -258,6 +258,62 @@ def search_via_google(query, location, site, api_key):
                         elif company == "Company":
                             company = part
                 
+                # EXTRACT SALARY from snippet or title
+                salary = "Not disclosed"
+                salary_patterns = [
+                    r'₹\s*(\d+(?:,\d+)*)\s*-\s*₹?\s*(\d+(?:,\d+)*)',  # ₹3,50,000 - ₹4,00,000
+                    r'(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*(?:lacs?|lakhs?)\s*p\.?a\.?',  # 3.5-4 Lacs P.A.
+                    r'(\d+(?:\.\d+)?)\s*lpa',  # 5 LPA
+                    r'₹\s*(\d+(?:,\d+)*)\s*(?:per month|pm|/month)',  # ₹50,000 per month
+                ]
+                
+                search_text = f"{title} {snippet}".lower()
+                
+                for pattern in salary_patterns:
+                    match = re.search(pattern, search_text, re.IGNORECASE)
+                    if match:
+                        if '-' in pattern and match.group(2):  # Range
+                            num1 = match.group(1).replace(',', '').replace('.', '')
+                            num2 = match.group(2).replace(',', '').replace('.', '')
+                            
+                            if 'lac' in search_text or 'lakh' in search_text:
+                                salary = f"₹{num1}-{num2} Lacs P.A."
+                            else:
+                                salary = f"₹{num1}-{num2}"
+                        else:  # Single value
+                            num = match.group(1).replace(',', '').replace('.', '')
+                            if 'lpa' in search_text:
+                                salary = f"{num} LPA"
+                            elif 'month' in search_text or 'pm' in search_text:
+                                salary = f"₹{num}/month"
+                            else:
+                                salary = f"₹{num}"
+                        break
+                
+                # EXTRACT EXPERIENCE from snippet or title
+                experience = "Not disclosed"
+                exp_patterns = [
+                    r'(\d+)\s*-\s*(\d+)\s*(?:years?|yrs?)',  # 2-5 years
+                    r'(\d+)\+?\s*(?:years?|yrs?)',  # 3+ years
+                    r'fresher',  # Fresher
+                    r'0\s*-\s*(\d+)\s*(?:years?|yrs?)',  # 0-2 years
+                ]
+                
+                for pattern in exp_patterns:
+                    match = re.search(pattern, search_text, re.IGNORECASE)
+                    if match:
+                        if 'fresher' in pattern:
+                            experience = "Fresher"
+                        elif match.group(2) if 'group(2)' in str(match.groups()) else False:
+                            experience = f"{match.group(1)}-{match.group(2)} years"
+                        else:
+                            experience = f"{match.group(1)}+ years"
+                        break
+                
+                # If still not found, use generic text
+                if experience == "Not disclosed":
+                    experience = "Check job details"
+                
                 # Source
                 if 'naukri.com' in link:
                     source = "Naukri"
@@ -272,14 +328,14 @@ def search_via_google(query, location, site, api_key):
                     "title": job_title,
                     "company": company,
                     "location": job_location,
-                    "salary": "Not disclosed",
-                    "experience": "Check job details",
+                    "salary": salary,
+                    "experience": experience,
                     "link": link,
                     "source": source
                 }
                 
                 jobs.append(job)
-                print(f"✅ {job_title} at {company} in {job_location} ({source})")
+                print(f"✅ {job_title} at {company} | Salary: {salary} | Exp: {experience}")
                 
             except Exception as e:
                 print(f"⚠️ Parse error: {e}")
