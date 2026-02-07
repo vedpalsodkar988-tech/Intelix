@@ -27,9 +27,9 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 # ============================================
-# DEVELOPER MODE - Unlimited tasks for VED!
+# DEVELOPER MODE - Unlimited tasks for ved!
 # ============================================
-DEVELOPER_ACCOUNTS = ['VED']
+DEVELOPER_ACCOUNTS = ['ved']
 
 # PostgreSQL connection
 def get_db_connection():
