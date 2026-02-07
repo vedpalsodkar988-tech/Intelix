@@ -4,29 +4,42 @@ import requests
 
 def jobsearch_task(query, user_profile=None):
     """
-    AI Job Search - GENIUS METHOD!
-    Uses Google: "python developer" site:naukri.com
-    Gets REAL job URLs from Naukri/LinkedIn/Indeed!
+    AI Job Search - WITH SALARY & LOCATION FILTERING!
+    Example: "Find software engineer jobs in Pune, salary 1,00,000+"
     """
     print(f"💼 AI Job Search Starting...")
     print(f"Original query: {query}")
     
-    # Extract the actual role from the query
+    original_query = query
     clean_query = query.lower()
     
-    # Remove these words
-    remove_words = [
-        'find', 'search', 'get', 'show', 'looking for', 'look for',
-        'job', 'jobs', 'position', 'positions', 'for', 'in', 'at',
-        'give me', 'get me', 'i want', 'i need', 'opening', 'openings'
+    # STEP 1: Extract salary requirements
+    min_salary = None
+    salary_patterns = [
+        (r'salary[:\s]+₹?\s*(\d+(?:,\d+)*)\s*\+?', 'absolute'),  # "salary: 100000" or "salary ₹1,00,000+"
+        (r'₹\s*(\d+(?:,\d+)*)\s*\+?', 'absolute'),                # "₹100000+" or "₹1,00,000+"
+        (r'(\d+)\s*lpa\s*\+?', 'lpa'),                            # "5 LPA+" or "10LPA+"
+        (r'(\d+)\s*-\s*(\d+)\s*lpa', 'lpa_range'),               # "5-8 LPA"
     ]
     
-    for word in remove_words:
-        clean_query = re.sub(r'\b' + word + r'\b', '', clean_query, flags=re.IGNORECASE)
+    for pattern, salary_type in salary_patterns:
+        match = re.search(pattern, clean_query, re.IGNORECASE)
+        if match:
+            num_str = match.group(1).replace(',', '')
+            
+            if salary_type == 'lpa' or salary_type == 'lpa_range':
+                # Convert LPA to annual amount
+                min_salary = int(num_str) * 100000
+                print(f"💰 Salary filter: {num_str}+ LPA (₹{min_salary:,}+ per year)")
+            else:
+                min_salary = int(num_str)
+                print(f"💰 Salary filter: ₹{min_salary:,}+ minimum")
+            
+            # Remove salary part from query
+            clean_query = re.sub(pattern, '', clean_query, flags=re.IGNORECASE)
+            break
     
-    clean_query = re.sub(r'\s+', ' ', clean_query).strip()
-    
-    # Extract location
+    # STEP 2: Extract location
     location = None
     location_keywords = {
         'pune': 'Pune',
@@ -34,9 +47,12 @@ def jobsearch_task(query, user_profile=None):
         'bangalore': 'Bangalore',
         'bengaluru': 'Bangalore',
         'delhi': 'Delhi',
+        'ncr': 'Delhi NCR',
         'hyderabad': 'Hyderabad',
         'chennai': 'Chennai',
         'kolkata': 'Kolkata',
+        'gurgaon': 'Gurgaon',
+        'noida': 'Noida',
         'remote': 'Remote'
     }
     
@@ -44,12 +60,28 @@ def jobsearch_task(query, user_profile=None):
         if keyword in clean_query:
             location = city
             clean_query = clean_query.replace(keyword, '').strip()
+            print(f"📍 Location filter: {location} ONLY")
             break
+    
+    # STEP 3: Remove common words
+    remove_words = [
+        'find', 'search', 'get', 'show', 'looking for', 'look for',
+        'job', 'jobs', 'position', 'positions', 'for', 'in', 'at',
+        'give me', 'get me', 'i want', 'i need', 'opening', 'openings',
+        'salary', 'range', 'lpa', 'per', 'month', 'year', 'annual',
+        'minimum', 'above', 'below', 'between'
+    ]
+    
+    for word in remove_words:
+        clean_query = re.sub(r'\b' + word + r'\b', '', clean_query, flags=re.IGNORECASE)
+    
+    clean_query = re.sub(r'[:\-,\+]', ' ', clean_query)  # Remove punctuation
+    clean_query = re.sub(r'\s+', ' ', clean_query).strip()
     
     if not clean_query:
         clean_query = "software engineer"
     
-    print(f"✅ Query: '{clean_query}'" + (f" in {location}" if location else ""))
+    print(f"✅ Final search: '{clean_query}'" + (f" in {location}" if location else ""))
     
     # Get SerpAPI key
     serpapi_key = os.environ.get('SERPAPI_KEY', '').strip()
@@ -61,42 +93,84 @@ def jobsearch_task(query, user_profile=None):
         all_jobs = []
         
         # Search Naukri via Google
-        print("🔍 Searching Naukri via Google...")
+        print("🔍 Searching Naukri...")
         naukri_jobs = search_via_google(clean_query, location, "naukri.com/job-listings", serpapi_key)
         all_jobs.extend(naukri_jobs)
         
         # Search LinkedIn via Google
-        print("🔍 Searching LinkedIn via Google...")
+        print("🔍 Searching LinkedIn...")
         linkedin_jobs = search_via_google(clean_query, location, "linkedin.com/jobs/view", serpapi_key)
         all_jobs.extend(linkedin_jobs)
         
         # Search Indeed via Google  
-        print("🔍 Searching Indeed via Google...")
+        print("🔍 Searching Indeed...")
         indeed_jobs = search_via_google(clean_query, location, "in.indeed.com/viewjob", serpapi_key)
         all_jobs.extend(indeed_jobs)
         
-        if not all_jobs:
+        # FILTER RESULTS
+        filtered_jobs = []
+        
+        for job in all_jobs:
+            # Location filter (if specified)
+            if location:
+                job_loc = job['location'].lower()
+                if location.lower() not in job_loc and location.lower() not in job['title'].lower():
+                    print(f"⏭️  Skipped: {job['title']} (Location: {job['location']} != {location})")
+                    continue
+            
+            # Salary filter (if specified and salary is disclosed)
+            if min_salary and job['salary'] != "Not disclosed":
+                # Try to extract salary from job
+                salary_str = job['salary'].lower()
+                
+                # Extract numbers from salary string
+                salary_nums = re.findall(r'(\d+(?:,\d+)*)', salary_str)
+                
+                if salary_nums:
+                    # Convert to int (remove commas)
+                    job_salary = int(salary_nums[0].replace(',', ''))
+                    
+                    # If salary is in thousands or lakhs, convert
+                    if 'lpa' in salary_str or 'lakh' in salary_str:
+                        job_salary = job_salary * 100000
+                    elif job_salary < 100000:  # Probably in thousands
+                        job_salary = job_salary * 1000
+                    
+                    # Check if meets minimum
+                    if job_salary < min_salary:
+                        print(f"⏭️  Skipped: {job['title']} (Salary: ₹{job_salary:,} < ₹{min_salary:,})")
+                        continue
+            
+            filtered_jobs.append(job)
+        
+        if not filtered_jobs:
             return {
                 "status": "error",
-                "message": f"No jobs found for '{clean_query}'. Try: 'software engineer', 'data analyst', 'marketing manager'."
+                "message": f"No jobs found matching your criteria. Try broader search terms or remove salary/location filters."
             }
         
         # Remove duplicates
         seen = set()
         unique_jobs = []
-        for job in all_jobs:
+        for job in filtered_jobs:
             if job['link'] not in seen:
                 seen.add(job['link'])
                 unique_jobs.append(job)
         
-        print(f"🎉 Found {len(unique_jobs)} unique jobs!")
+        print(f"🎉 Found {len(unique_jobs)} jobs matching all criteria!")
         
         return {
             "status": "success",
             "jobs": unique_jobs[:5],
             "total_found": len(unique_jobs),
             "query": clean_query,
-            "message": f"💼 Found {len(unique_jobs[:5])} jobs for '{clean_query}'!"
+            "filters": {
+                "location": location,
+                "min_salary": f"₹{min_salary:,}" if min_salary else None
+            },
+            "message": f"💼 Found {len(unique_jobs[:5])} jobs for '{clean_query}'" + 
+                      (f" in {location}" if location else "") + 
+                      (f" with salary ₹{min_salary:,}+" if min_salary else "") + "!"
         }
         
     except Exception as e:
@@ -111,17 +185,17 @@ def jobsearch_task(query, user_profile=None):
 
 def search_via_google(query, location, site, api_key):
     """
-    GENIUS: Google search with site: operator
-    Example: "python developer pune" site:naukri.com
-    Returns REAL Naukri job URLs!
+    Search jobs using Google with strict location matching
     """
     jobs = []
     
     try:
-        # Build Google query
+        # Build Google query with LOCATION in query for better results
         google_query = f'"{query}"'
+        
         if location:
-            google_query += f' {location}'
+            google_query += f' "{location}"'  # Force location in results!
+        
         google_query += f' site:{site}'
         
         print(f"📡 Query: {google_query}")
@@ -153,6 +227,11 @@ def search_via_google(query, location, site, api_key):
         results = data.get('organic_results', [])
         print(f"📋 Found {len(results)} results")
         
+        # Indian cities for smart parsing
+        INDIAN_CITIES = ['pune', 'mumbai', 'bangalore', 'bengaluru', 'delhi', 'ncr', 
+                        'hyderabad', 'chennai', 'kolkata', 'ahmedabad', 'gurgaon', 
+                        'noida', 'kochi', 'jaipur', 'chandigarh', 'indore', 'remote']
+        
         for result in results:
             try:
                 title = result.get('title', '')
@@ -162,26 +241,20 @@ def search_via_google(query, location, site, api_key):
                 if not link or site not in link:
                     continue
                 
-                # SMART PARSING with city detection
-                INDIAN_CITIES = ['pune', 'mumbai', 'bangalore', 'bengaluru', 'delhi', 'ncr', 
-                                'hyderabad', 'chennai', 'kolkata', 'ahmedabad', 'gurgaon', 
-                                'noida', 'kochi', 'jaipur', 'chandigarh', 'indore', 'remote']
-                
+                # SMART PARSING
                 company = "Company"
                 job_location = location or "India"
                 job_title = title
                 
                 if ' - ' in title:
                     parts = [p.strip() for p in title.split(' - ')]
-                    job_title = parts[0]  # First part is always job title
+                    job_title = parts[0]
                     
                     # Identify cities vs companies
                     for part in parts[1:]:
                         part_lower = part.lower()
-                        # Check if it's a city
                         if any(city in part_lower for city in INDIAN_CITIES):
                             job_location = part
-                        # Otherwise it's a company
                         elif company == "Company":
                             company = part
                 
@@ -206,7 +279,7 @@ def search_via_google(query, location, site, api_key):
                 }
                 
                 jobs.append(job)
-                print(f"✅ {job_title} at {company} ({source})")
+                print(f"✅ {job_title} at {company} in {job_location} ({source})")
                 
             except Exception as e:
                 print(f"⚠️ Parse error: {e}")
