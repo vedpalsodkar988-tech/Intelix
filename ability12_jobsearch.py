@@ -2,142 +2,36 @@ import os
 import re
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin, quote_plus
-
-# Major Indian Companies & Startups Career Pages
-COMPANIES = {
-    'TCS': {
-        'name': 'Tata Consultancy Services',
-        'base_url': 'https://ibegin.tcs.com',
-        'search_patterns': [
-            '/iBegin/jobs/search?q={query}',
-            '/iBegin/jobs/search?searchText={query}'
-        ]
-    },
-    'Infosys': {
-        'name': 'Infosys',
-        'base_url': 'https://careers.infosys.com',
-        'search_patterns': [
-            '/jobs?q={query}',
-            '/search-jobs?q={query}'
-        ]
-    },
-    'Wipro': {
-        'name': 'Wipro',
-        'base_url': 'https://careers.wipro.com',
-        'search_patterns': [
-            '/careers-search-jobs?q={query}',
-            '/job-search?keywords={query}'
-        ]
-    },
-    'Accenture': {
-        'name': 'Accenture',
-        'base_url': 'https://www.accenture.com',
-        'search_patterns': [
-            '/in-en/careers/jobsearch?jk={query}',
-            '/careers/job-search?q={query}'
-        ]
-    },
-    'HCL Technologies': {
-        'name': 'HCL Technologies',
-        'base_url': 'https://www.hcltech.com',
-        'search_patterns': [
-            '/careers/search?q={query}',
-            '/job-openings?keyword={query}'
-        ]
-    },
-    'Tech Mahindra': {
-        'name': 'Tech Mahindra',
-        'base_url': 'https://careers.techmahindra.com',
-        'search_patterns': [
-            '/job-search?q={query}',
-            '/jobs?keywords={query}'
-        ]
-    },
-    'IBM India': {
-        'name': 'IBM India',
-        'base_url': 'https://www.ibm.com',
-        'search_patterns': [
-            '/careers/search?q={query}&country=India',
-            '/in-en/careers/search?q={query}'
-        ]
-    },
-    'Cognizant': {
-        'name': 'Cognizant',
-        'base_url': 'https://careers.cognizant.com',
-        'search_patterns': [
-            '/job-search?q={query}&location=India',
-            '/jobs?keyword={query}'
-        ]
-    },
-    'Capgemini': {
-        'name': 'Capgemini India',
-        'base_url': 'https://www.capgemini.com',
-        'search_patterns': [
-            '/in-en/careers/job-search?q={query}',
-            '/careers/jobs?search={query}'
-        ]
-    },
-    'Amazon India': {
-        'name': 'Amazon',
-        'base_url': 'https://www.amazon.jobs',
-        'search_patterns': [
-            '/en/search?base_query={query}&loc_query=India',
-            '/search?q={query}&country=IND'
-        ]
-    },
-    'Flipkart': {
-        'name': 'Flipkart',
-        'base_url': 'https://www.flipkartcareers.com',
-        'search_patterns': [
-            '/#!/joblist?q={query}',
-            '/jobs?search={query}'
-        ]
-    },
-    'Paytm': {
-        'name': 'Paytm',
-        'base_url': 'https://paytm.com',
-        'search_patterns': [
-            '/careers?q={query}',
-            '/jobs?keyword={query}'
-        ]
-    },
-    'Zomato': {
-        'name': 'Zomato',
-        'base_url': 'https://www.zomato.com',
-        'search_patterns': [
-            '/careers/jobs?q={query}',
-            '/jobs?search={query}'
-        ]
-    },
-    'Swiggy': {
-        'name': 'Swiggy',
-        'base_url': 'https://careers.swiggy.com',
-        'search_patterns': [
-            '/#/jobs?q={query}',
-            '/search?keyword={query}'
-        ]
-    },
-    'Ola': {
-        'name': 'Ola',
-        'base_url': 'https://www.olacabs.com',
-        'search_patterns': [
-            '/careers?q={query}',
-            '/jobs?search={query}'
-        ]
-    }
-}
-
 
 def jobsearch_task(query, user_profile=None):
     """
-    GENIUS JOB SEARCH - Scrapes company career pages directly!
-    Much better than Naukri/LinkedIn!
+    NAUKRI SCRAPING WITH JAVASCRIPT RENDERING
+    TEST VERSION - Uses render=true to load Naukri properly
     """
-    print(f"💼 Company Career Pages Job Search Starting...")
+    print(f"💼 Naukri Job Search (with rendering)...")
     print(f"Original query: {query}")
     
     clean_query = query.lower()
+    
+    # Extract salary
+    min_salary = None
+    salary_patterns = [
+        (r'salary[:\s]+₹?\s*(\d+(?:,\d+)*)\s*\+?', 'absolute'),
+        (r'₹\s*(\d+(?:,\d+)*)\s*\+?', 'absolute'),
+        (r'(\d+)\s*lpa\s*\+?', 'lpa'),
+    ]
+    
+    for pattern, salary_type in salary_patterns:
+        match = re.search(pattern, clean_query, re.IGNORECASE)
+        if match:
+            num_str = match.group(1).replace(',', '')
+            if salary_type == 'lpa':
+                min_salary = int(num_str) * 100000
+                print(f"💰 Salary filter: {num_str}+ LPA")
+            else:
+                min_salary = int(num_str)
+            clean_query = re.sub(pattern, '', clean_query, flags=re.IGNORECASE)
+            break
     
     # Extract location
     location = None
@@ -152,25 +46,28 @@ def jobsearch_task(query, user_profile=None):
         if keyword in clean_query:
             location = city
             clean_query = clean_query.replace(keyword, '').strip()
-            print(f"📍 Location filter: {location}")
+            print(f"📍 Location: {location}")
             break
     
     # Clean query
     remove_words = [
         'find', 'search', 'get', 'show', 'looking for', 'look for',
         'job', 'jobs', 'position', 'positions', 'for', 'in', 'at',
-        'give me', 'get me', 'i want', 'i need', 'opening', 'openings'
+        'give me', 'get me', 'i want', 'i need', 'opening', 'openings',
+        'salary', 'range', 'lpa', 'per', 'month', 'year', 'annual',
+        'minimum', 'above', 'below', 'between'
     ]
     
     for word in remove_words:
         clean_query = re.sub(r'\b' + word + r'\b', '', clean_query, flags=re.IGNORECASE)
     
+    clean_query = re.sub(r'[:\-,\+]', ' ', clean_query)
     clean_query = re.sub(r'\s+', ' ', clean_query).strip()
     
     if not clean_query:
         clean_query = "software engineer"
     
-    print(f"✅ Searching for: '{clean_query}' on company career pages")
+    print(f"✅ Searching: '{clean_query}'" + (f" in {location}" if location else ""))
     
     scraperapi_key = os.environ.get('SCRAPERAPI_KEY', '').strip()
     
@@ -178,63 +75,141 @@ def jobsearch_task(query, user_profile=None):
         return {"status": "error", "message": "ScraperAPI not configured"}
     
     try:
-        all_jobs = []
+        # Build Naukri URL
+        search_term = clean_query.replace(' ', '-')
         
-        # Search ONLY top 3 IT giants: TCS, Infosys, Wipro
-        # These are the most trusted companies in India
-        top_companies = [
-            'TCS',
-            'Infosys',
-            'Wipro'
-        ]
+        if location:
+            location_slug = location.lower().replace(' ', '-')
+            naukri_url = f"https://www.naukri.com/{search_term}-jobs-in-{location_slug}"
+        else:
+            naukri_url = f"https://www.naukri.com/{search_term}-jobs"
         
-        print(f"🎯 Searching BIG 3: TCS, Infosys, Wipro")
+        print(f"🔍 URL: {naukri_url}")
         
-        for company_key in top_companies:
-            if company_key not in COMPANIES:
-                continue
-                
-            company_data = COMPANIES[company_key]
-            print(f"\n🔍 Searching {company_data['name']}...")
-            
-            jobs = search_company_careers(
-                company_key,
-                company_data,
-                clean_query,
-                location,
-                scraperapi_key
-            )
-            
-            all_jobs.extend(jobs)
-            
-            # Stop if we have enough jobs
-            if len(all_jobs) >= 5:
-                print(f"✅ Found enough jobs, stopping search")
-                break
+        # CRITICAL: render=true to load JavaScript!
+        print("📡 Calling ScraperAPI with JavaScript rendering (costs ~7 credits)...")
+        scraper_url = f"http://api.scraperapi.com?api_key={scraperapi_key}&url={naukri_url}&render=true"
         
-        if not all_jobs:
+        response = requests.get(scraper_url, timeout=90)  # Rendering takes longer
+        
+        print(f"📊 Status: {response.status_code}")
+        
+        if response.status_code != 200:
             return {
                 "status": "error",
-                "message": f"No jobs found for '{clean_query}' on company career pages. Try: 'software developer', 'data analyst', 'java developer'."
+                "message": f"Naukri returned {response.status_code}"
             }
         
-        # Filter by location if specified
-        if location:
-            filtered = [j for j in all_jobs if location.lower() in j['location'].lower()]
-            if filtered:
-                all_jobs = filtered
+        soup = BeautifulSoup(response.content, 'html.parser')
         
-        # Return TOP 3
-        top_jobs = all_jobs[:3]
+        # Try to find job cards
+        job_cards = (
+            soup.find_all('article', class_='jobTuple') or
+            soup.find_all('div', class_='srp-jobtuple-wrapper') or
+            soup.find_all('div', attrs={'data-job-id': True})
+        )
         
-        print(f"\n🎉 Returning TOP {len(top_jobs)} jobs from company career pages!")
+        print(f"📋 Found {len(job_cards)} job cards")
+        
+        if not job_cards:
+            # Try alternate selectors after rendering
+            job_cards = soup.find_all('div', class_=re.compile(r'job', re.I))
+            print(f"📋 Found {len(job_cards)} alternate job elements")
+        
+        if not job_cards:
+            return {
+                "status": "error",
+                "message": f"Could not find jobs. Naukri structure may have changed. Try: 'software developer', 'data analyst'."
+            }
+        
+        # Extract job details
+        jobs = []
+        
+        for card in job_cards[:10]:
+            try:
+                # Title
+                title_elem = (
+                    card.find('a', class_='title') or
+                    card.find('a', class_='job-title') or
+                    card.find('h2') or
+                    card.find('h3')
+                )
+                
+                if not title_elem:
+                    continue
+                
+                title = title_elem.get_text(strip=True)
+                
+                # Link
+                link = None
+                if title_elem.name == 'a' and title_elem.get('href'):
+                    href = title_elem['href']
+                    link = href if href.startswith('http') else f"https://www.naukri.com{href}"
+                elif title_elem.find('a'):
+                    href = title_elem.find('a')['href']
+                    link = href if href.startswith('http') else f"https://www.naukri.com{href}"
+                
+                if not link or 'naukri.com' not in link:
+                    continue
+                
+                # Company
+                company_elem = (
+                    card.find('a', class_='subTitle') or
+                    card.find('div', class_='companyInfo') or
+                    card.find('span', class_='comp-name')
+                )
+                company = company_elem.get_text(strip=True) if company_elem else "Company"
+                
+                # Location
+                loc_elem = card.find('span', class_='loc') or card.find('li', class_='location')
+                job_location = loc_elem.get_text(strip=True) if loc_elem else (location or "India")
+                
+                # Filter by location
+                if location and location.lower() not in job_location.lower():
+                    continue
+                
+                # Salary
+                sal_elem = card.find('span', class_='salary') or card.find('li', class_='salary')
+                salary = sal_elem.get_text(strip=True) if sal_elem else "Not disclosed"
+                
+                # Experience
+                exp_elem = card.find('span', class_='experience') or card.find('li', class_='experience')
+                experience = exp_elem.get_text(strip=True) if exp_elem else "Check job details"
+                
+                job = {
+                    "title": title,
+                    "company": company,
+                    "location": job_location,
+                    "salary": salary,
+                    "experience": experience,
+                    "link": link,
+                    "source": "Naukri"
+                }
+                
+                jobs.append(job)
+                print(f"✅ {title} | {company} | {salary}")
+                
+                if len(jobs) >= 3:  # TOP 3
+                    break
+                
+            except Exception as e:
+                print(f"⚠️ Error parsing job: {e}")
+                continue
+        
+        if not jobs:
+            return {
+                "status": "error",
+                "message": "Found job cards but couldn't extract details. Try different keywords."
+            }
+        
+        print(f"🎉 Returning {len(jobs)} jobs!")
         
         return {
             "status": "success",
-            "jobs": top_jobs,
-            "total_found": len(all_jobs),
+            "jobs": jobs,
+            "total_found": len(jobs),
             "query": clean_query,
-            "message": f"💼 Found {len(top_jobs)} jobs directly from company websites!"
+            "message": f"💼 Found {len(jobs)} jobs on Naukri!"
         }
         
     except Exception as e:
@@ -243,117 +218,5 @@ def jobsearch_task(query, user_profile=None):
         traceback.print_exc()
         return {
             "status": "error",
-            "message": "Job search failed. Please try again."
+            "message": f"Search failed: {str(e)}"
         }
-
-
-def search_company_careers(company_key, company_data, query, location, api_key):
-    """
-    Search a specific company's career page
-    """
-    jobs = []
-    
-    try:
-        base_url = company_data['base_url']
-        company_name = company_data['name']
-        
-        # Try first search pattern
-        search_pattern = company_data['search_patterns'][0]
-        search_url = base_url + search_pattern.format(query=quote_plus(query))
-        
-        print(f"  📡 URL: {search_url[:80]}...")
-        
-        # Use ScraperAPI
-        scraper_url = f"http://api.scraperapi.com?api_key={api_key}&url={search_url}"
-        response = requests.get(scraper_url, timeout=45)
-        
-        if response.status_code != 200:
-            print(f"  ⚠️ Status {response.status_code}")
-            return jobs
-        
-        soup = BeautifulSoup(response.content, 'html.parser')
-        
-        # Generic job card selectors (common across most career pages)
-        job_cards = (
-            soup.find_all('div', class_=re.compile(r'job-?card', re.I)) or
-            soup.find_all('div', class_=re.compile(r'job-?item', re.I)) or
-            soup.find_all('div', class_=re.compile(r'position', re.I)) or
-            soup.find_all('li', class_=re.compile(r'job', re.I)) or
-            soup.find_all('article', class_=re.compile(r'job', re.I))
-        )
-        
-        print(f"  📋 Found {len(job_cards)} potential jobs")
-        
-        for card in job_cards[:5]:  # Max 5 jobs per company
-            try:
-                # Extract title
-                title_elem = (
-                    card.find('h2') or
-                    card.find('h3') or
-                    card.find('a', class_=re.compile(r'title|job-title', re.I)) or
-                    card.find('span', class_=re.compile(r'title', re.I))
-                )
-                
-                if not title_elem:
-                    continue
-                
-                title = title_elem.get_text(strip=True)
-                
-                # Skip if title doesn't match query
-                if query.lower() not in title.lower():
-                    continue
-                
-                # Extract link
-                link_elem = card.find('a', href=True)
-                link = None
-                if link_elem:
-                    href = link_elem['href']
-                    link = urljoin(base_url, href)
-                
-                if not link:
-                    link = search_url  # Fallback to search page
-                
-                # Extract location
-                loc_elem = card.find(string=re.compile(r'Bangalore|Mumbai|Pune|Delhi|Hyderabad|Chennai|India', re.I))
-                job_location = "India"
-                if loc_elem:
-                    job_location = loc_elem.strip()
-                elif location:
-                    job_location = location
-                
-                # Extract salary (often not on listing page)
-                salary = "Not disclosed"
-                sal_elem = card.find(string=re.compile(r'₹|lpa|lakh|salary', re.I))
-                if sal_elem:
-                    salary = sal_elem.strip()[:50]  # Max 50 chars
-                
-                # Extract experience
-                experience = "Check job details"
-                exp_elem = card.find(string=re.compile(r'\d+\s*(?:-|\+)?\s*\d*\s*(?:years?|yrs?)', re.I))
-                if exp_elem:
-                    exp_match = re.search(r'\d+\s*(?:-|\+)?\s*\d*\s*(?:years?|yrs?)', exp_elem, re.I)
-                    if exp_match:
-                        experience = exp_match.group(0)
-                
-                job = {
-                    "title": title,
-                    "company": company_name,
-                    "location": job_location,
-                    "salary": salary,
-                    "experience": experience,
-                    "link": link,
-                    "source": f"{company_name} Careers"
-                }
-                
-                jobs.append(job)
-                print(f"  ✅ {title} | {job_location}")
-                
-            except Exception as e:
-                print(f"  ⚠️ Parse error: {e}")
-                continue
-        
-        return jobs
-        
-    except Exception as e:
-        print(f"  ❌ Failed for {company_name}: {e}")
-        return jobs
