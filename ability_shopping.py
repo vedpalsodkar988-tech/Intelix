@@ -347,9 +347,27 @@ def shopping_assistant_task(query, user_profile=None):
     print("🛒 AI Shopping Assistant Starting (ScraperAPI)...")
     print(f"Query: {query}")
     
+    # Extract budget from query
+    budget = None
+    budget_patterns = [
+        r'under\s+₹?\s*(\d+(?:,\d+)*)',  # "under 10000" or "under ₹10,000"
+        r'below\s+₹?\s*(\d+(?:,\d+)*)',  # "below 10000"
+        r'less than\s+₹?\s*(\d+(?:,\d+)*)',  # "less than 10000"
+        r'₹?\s*(\d+(?:,\d+)*)\s+(?:or less|max|maximum)',  # "10000 or less"
+    ]
+    
+    for pattern in budget_patterns:
+        match = re.search(pattern, query, re.IGNORECASE)
+        if match:
+            budget_str = match.group(1).replace(',', '')
+            budget = float(budget_str)
+            print(f"💰 Budget extracted: ₹{budget:,.0f}")
+            break
+    
     # Clean the query
     product_query = query.lower()
     product_query = re.sub(r'\b(find|search|buy|order|get|purchase|best|top)\b', '', product_query).strip()
+    product_query = re.sub(r'under.*|below.*|less than.*|₹?\s*\d+.*', '', product_query, flags=re.IGNORECASE).strip()
     product_query = re.sub(r'\s+', ' ', product_query)
     
     print(f"Cleaned query: {product_query}")
@@ -391,11 +409,11 @@ def shopping_assistant_task(query, user_profile=None):
             for word in query_words:
                 if len(word) > 2:  # Ignore short words like "of", "in"
                     if word in title_lower:
-                        score += 1
+                        score += 2  # Increased weight
             
             # Boost score if ALL query words present
             if all(word in title_lower for word in query_words if len(word) > 2):
-                score += 5
+                score += 10  # Increased boost
             
             return score
         
@@ -403,10 +421,38 @@ def shopping_assistant_task(query, user_profile=None):
         for product in all_products:
             product['relevance'] = calculate_relevance_score(product, product_query)
         
+        # Filter by budget if specified
+        if budget:
+            print(f"\n🔍 Filtering by budget: ₹{budget:,.0f}")
+            print(f"📊 Before budget filter: {len(all_products)} products")
+            
+            filtered_products = [p for p in all_products if p['price_numeric'] <= budget]
+            
+            print(f"📊 After budget filter: {len(filtered_products)} products")
+            
+            if not filtered_products:
+                return {
+                    "status": "error",
+                    "message": f"No products found under ₹{budget:,.0f}. Try increasing your budget.",
+                    "suggestion": f"Lowest price found: ₹{min(p['price_numeric'] for p in all_products):,.0f}"
+                }
+            
+            all_products = filtered_products
+        
+        # Filter by relevance - only keep products with score > 0
+        all_products = [p for p in all_products if p['relevance'] > 0]
+        
+        if not all_products:
+            return {
+                "status": "error",
+                "message": f"No products matching '{product_query}' found. Try different keywords.",
+                "suggestion": "Use specific terms like 'gaming laptop' instead of just 'laptop'"
+            }
+        
         # Sort by relevance first (highest first), then by price (lowest first)
         all_products.sort(key=lambda x: (-x['relevance'], x['price_numeric']))
         
-        print(f"\n✅ Found {len(all_products)} total products")
+        print(f"\n✅ Found {len(all_products)} relevant products")
         print(f"🎯 BEST MATCH: {all_products[0]['title'][:50]}... - {all_products[0]['price']} ({all_products[0]['site']}) [Relevance: {all_products[0]['relevance']}]")
         
         # Return TOP 5 products with proper format for frontend
@@ -414,7 +460,8 @@ def shopping_assistant_task(query, user_profile=None):
             "status": "success",
             "products": all_products[:5],
             "total_found": len(all_products),
-            "query": product_query
+            "query": product_query,
+            "budget": f"₹{budget:,.0f}" if budget else None
         }
         
     except Exception as e:
