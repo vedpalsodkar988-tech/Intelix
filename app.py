@@ -162,19 +162,19 @@ ABILITIES = [
     },
     {
         "id": 2,
-        "name": "AI Job Finder",
-        "description": "Search jobs across multiple platforms based on your profile",
-        "functions": ["Search multiple job portals", "Match based on profile", "Filter by salary & experience"],
-        "rating": 5,
-        "status": "active"
-    },
-    {
-        "id": 3,
         "name": "AI Career Agent",
         "description": "Find internships on Internshala perfect for students",
         "functions": ["Search Internshala", "Filter by role & location", "Show TOP 3 matches"],
         "rating": 5,
         "status": "active"
+    },
+    {
+        "id": 3,
+        "name": "AI Job Finder",
+        "description": "Search jobs across multiple platforms based on your profile",
+        "functions": ["Search multiple job portals", "Match based on profile", "Filter by salary & experience"],
+        "rating": 5,
+        "status": "coming_soon"
     },
     {
         "id": 4,
