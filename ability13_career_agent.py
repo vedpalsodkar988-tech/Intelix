@@ -84,17 +84,31 @@ def scrape_internshala_internships(role, location, scraperapi_key):
         
         for idx, card in enumerate(internship_cards[:10]):
             try:
-                # Get internship title/profile
-                title_elem = card.find('h3', class_='profile') or card.find('a', class_='view_detail_button')
-                if not title_elem:
-                    title_elem = card.find('h4') or card.find('h3')
+                # Get internship title/profile - try multiple selectors
+                title_elem = (
+                    card.find('h3', class_='profile') or 
+                    card.find('h3', class_='heading_4_5') or
+                    card.find('a', class_='view_detail_button') or
+                    card.find('div', class_='job-internship-name') or
+                    card.find('h4') or 
+                    card.find('h3')
+                )
                 
                 if not title_elem:
                     continue
                 
+                # Get text and clean it
                 title = title_elem.get_text().strip()
+                
+                # Remove "Internship" suffix if present (we'll add it back properly)
+                title = re.sub(r'\s+internship\s*$', '', title, flags=re.I).strip()
+                
                 if not title or len(title) < 3:
                     continue
+                
+                # Add "Internship" back
+                if 'internship' not in title.lower():
+                    title = f"{title} Internship"
                 
                 # Get company name
                 company_elem = card.find('a', class_='link_display_like_text') or card.find('div', class_='company-name')
