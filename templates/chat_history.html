@@ -147,6 +147,21 @@
         .toggle-results:hover {
             text-decoration: underline;
         }
+        .result-link {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+            color: white !important;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .result-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(59, 130, 246, 0.4);
+        }
     </style>
 </head>
 <body>
@@ -217,80 +232,77 @@
                             // Parse and display results
                             (function() {
                                 try {
-                                    const resultStr = `{{ (task.result or task['result']) | safe }}`;
-                                    let result;
-                                    
-                                    // Try to parse as JSON if it looks like JSON
-                                    if (resultStr.trim().startsWith('{') || resultStr.trim().startsWith('[')) {
-                                        // Replace Python-style quotes with JSON-style
-                                        const jsonStr = resultStr.replace(/'/g, '"').replace(/None/g, 'null').replace(/True/g, 'true').replace(/False/g, 'false');
-                                        result = JSON.parse(jsonStr);
-                                    } else {
-                                        result = { message: resultStr };
-                                    }
+                                    // Get the raw result string
+                                    const rawResult = {{ (task.result or task['result']) | tojson }};
                                     
                                     let html = '';
                                     
                                     // Shopping results
-                                    if (result.products && Array.isArray(result.products)) {
+                                    if (rawResult.products && Array.isArray(rawResult.products)) {
                                         html += '<h3 style="color: #60a5fa; margin-bottom: 15px;">🛒 Shopping Results</h3>';
-                                        result.products.forEach(product => {
+                                        rawResult.products.forEach(product => {
                                             html += `
                                                 <div class="result-card">
-                                                    <h4>${product.title || product.name}</h4>
-                                                    <p><strong>Price:</strong> ${product.price}</p>
-                                                    <p><strong>Platform:</strong> ${product.platform || product.site}</p>
-                                                    ${product.link ? `<a href="${product.link}" target="_blank">Buy Now →</a>` : ''}
+                                                    <h4>${product.title || product.name || 'Product'}</h4>
+                                                    <p><strong>Price:</strong> ${product.price || 'N/A'}</p>
+                                                    <p><strong>Platform:</strong> ${product.platform || product.site || 'N/A'}</p>
+                                                    ${product.link ? `<a href="${product.link}" target="_blank" class="result-link">Buy Now →</a>` : ''}
                                                 </div>
                                             `;
                                         });
                                     }
                                     // Job results
-                                    else if (result.jobs && Array.isArray(result.jobs)) {
+                                    else if (rawResult.jobs && Array.isArray(rawResult.jobs)) {
                                         html += '<h3 style="color: #60a5fa; margin-bottom: 15px;">💼 Job Results</h3>';
-                                        result.jobs.forEach(job => {
+                                        rawResult.jobs.forEach(job => {
                                             html += `
                                                 <div class="result-card">
-                                                    <h4>${job.title}</h4>
+                                                    <h4>${job.title || 'Job Opening'}</h4>
                                                     <p><strong>Company:</strong> ${job.company || 'N/A'}</p>
                                                     <p><strong>Location:</strong> ${job.location || 'N/A'}</p>
                                                     <p><strong>Experience:</strong> ${job.experience || 'N/A'}</p>
                                                     ${job.salary ? `<p><strong>Salary:</strong> ${job.salary}</p>` : ''}
-                                                    ${job.link ? `<a href="${job.link}" target="_blank">Apply Now →</a>` : ''}
+                                                    ${job.link ? `<a href="${job.link}" target="_blank" class="result-link">Apply Now →</a>` : ''}
                                                 </div>
                                             `;
                                         });
                                     }
                                     // Internship results
-                                    else if (result.internships && Array.isArray(result.internships)) {
+                                    else if (rawResult.internships && Array.isArray(rawResult.internships)) {
                                         html += '<h3 style="color: #60a5fa; margin-bottom: 15px;">🎓 Internship Results</h3>';
-                                        result.internships.forEach(internship => {
+                                        rawResult.internships.forEach(internship => {
                                             html += `
                                                 <div class="result-card">
-                                                    <h4>${internship.title}</h4>
+                                                    <h4>${internship.title || 'Internship'}</h4>
                                                     <p><strong>Company:</strong> ${internship.company || 'N/A'}</p>
                                                     <p><strong>Location:</strong> ${internship.location || 'N/A'}</p>
                                                     <p><strong>Duration:</strong> ${internship.duration || 'N/A'}</p>
                                                     ${internship.stipend ? `<p><strong>Stipend:</strong> ${internship.stipend}</p>` : ''}
-                                                    ${internship.link ? `<a href="${internship.link}" target="_blank">Apply Now →</a>` : ''}
+                                                    ${internship.link ? `<a href="${internship.link}" target="_blank" class="result-link">Apply Now →</a>` : ''}
                                                 </div>
                                             `;
                                         });
                                     }
-                                    // Message result
-                                    else if (result.message) {
-                                        html += `<div class="result-card"><p>${result.message}</p></div>`;
+                                    // Error message
+                                    else if (rawResult.message || rawResult.error) {
+                                        html += `<div class="result-card"><p>${rawResult.message || rawResult.error}</p></div>`;
                                     }
-                                    // Fallback
+                                    // Fallback - show formatted JSON
                                     else {
-                                        html += `<div class="result-card"><p>${resultStr}</p></div>`;
+                                        html += `<div class="result-card"><pre style="color: #8b92b0; font-size: 12px; white-space: pre-wrap;">${JSON.stringify(rawResult, null, 2)}</pre></div>`;
                                     }
                                     
                                     document.getElementById('result-content-{{ loop.index }}').innerHTML = html;
                                 } catch (e) {
-                                    // If parsing fails, show raw result
+                                    console.error('Parse error:', e);
+                                    // Show error message
                                     document.getElementById('result-content-{{ loop.index }}').innerHTML = 
-                                        `<div class="result-card"><p>{{ (task.result or task['result']) }}</p></div>`;
+                                        `<div class="result-card" style="color: #ef4444;">
+                                            <p><strong>Error displaying results</strong></p>
+                                            <p>Error: ${e.message}</p>
+                                            <p style="font-size: 12px; margin-top: 10px;">Raw data:</p>
+                                            <pre style="font-size: 11px; color: #8b92b0; white-space: pre-wrap;">{{ (task.result or task['result']) }}</pre>
+                                        </div>`;
                                 }
                             })();
                         </script>
