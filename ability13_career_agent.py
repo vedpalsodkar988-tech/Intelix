@@ -342,40 +342,51 @@ def career_agent_task(query, user_profile=None):
             print("⚠️ No internships found")
             return result
         
-        # STRICT FILTERING - Filter by profession AND location
+        # SMART FILTERING - Filter by profession AND location with synonym matching
         print(f"\n🔍 FILTERING: Looking for '{role}' in '{location}'")
         print(f"📊 Before filtering: {len(all_internships)} internships")
         
-        # Define role_keywords FIRST
+        # Define role_keywords and synonyms
         role_keywords = [word for word in role.lower().split() if len(word) > 2]  # Ignore short words
         print(f"🎯 Required keywords: {role_keywords}")
         
+        # Synonym mapping for common terms
+        synonyms = {
+            'web': ['web', 'website', 'frontend', 'front-end', 'front', 'fullstack', 'full-stack'],
+            'development': ['development', 'developer', 'dev'],
+            'python': ['python', 'django', 'flask'],
+            'java': ['java', 'spring', 'springboot'],
+            'digital': ['digital', 'online'],
+            'marketing': ['marketing', 'market'],
+            'graphic': ['graphic', 'graphics', 'design'],
+        }
+        
         filtered_internships = []
         
-        # If only 1 keyword, don't be too strict
-        require_all = len(role_keywords) > 1
-        
         for internship in all_internships:
-            # Filter by profession - title must contain role keywords AS WHOLE WORDS
             title_lower = internship['title'].lower()
             title_words = re.findall(r'\b\w+\b', title_lower)  # Extract whole words only
             
             print(f"\n  🔍 Checking: {internship['title']}")
             print(f"     Title words: {title_words}")
             
-            if require_all:
-                # For multi-word searches (web development), require ALL keywords
-                all_keywords_present = all(keyword in title_words for keyword in role_keywords)
+            # Check if keywords match (with synonyms)
+            matched_keywords = 0
+            for keyword in role_keywords:
+                # Get synonyms for this keyword
+                keyword_synonyms = synonyms.get(keyword, [keyword])
                 
-                if not all_keywords_present:
-                    missing_keywords = [kw for kw in role_keywords if kw not in title_words]
-                    print(f"  ⏭️  Skipped (missing keywords {missing_keywords})")
-                    continue
-            else:
-                # For single-word searches (python), require at least that one keyword
-                if role_keywords[0] not in title_words:
-                    print(f"  ⏭️  Skipped (keyword '{role_keywords[0]}' not found)")
-                    continue
+                # Check if ANY synonym is in title
+                if any(syn in title_words for syn in keyword_synonyms):
+                    matched_keywords += 1
+                    print(f"     ✓ Matched keyword '{keyword}' (via synonyms: {keyword_synonyms})")
+                else:
+                    print(f"     ✗ Missing keyword '{keyword}'")
+            
+            # Need to match ALL keywords (with synonyms)
+            if matched_keywords < len(role_keywords):
+                print(f"  ⏭️  Skipped (matched {matched_keywords}/{len(role_keywords)} keywords)")
+                continue
             
             # Filter by location if specified
             if location and location.lower() not in ['india', 'anywhere']:
@@ -385,7 +396,7 @@ def career_agent_task(query, user_profile=None):
                     continue
             
             filtered_internships.append(internship)
-            print(f"  ✅ MATCHED!")
+            print(f"  ✅ MATCHED! (all {len(role_keywords)} keywords found via synonyms)")
         
         print(f"\n📊 After filtering: {len(filtered_internships)} internships")
         
@@ -435,3 +446,4 @@ def career_agent_task(query, user_profile=None):
         import traceback
         traceback.print_exc()
         return result
+
