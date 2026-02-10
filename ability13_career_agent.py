@@ -350,18 +350,16 @@ def career_agent_task(query, user_profile=None):
         role_keywords = [word for word in role.lower().split() if len(word) > 2]  # Ignore short words
         
         for internship in all_internships:
-            # Filter by profession - title must contain role keywords AS WHOLE WORDS
+            # Filter by profession - title must contain ALL role keywords AS WHOLE WORDS
             title_lower = internship['title'].lower()
             title_words = re.findall(r'\b\w+\b', title_lower)  # Extract whole words only
             
-            # Count how many role keywords are in title as WHOLE words
-            match_count = sum(1 for keyword in role_keywords if keyword in title_words)
+            # Check if ALL keywords are present in title
+            all_keywords_present = all(keyword in title_words for keyword in role_keywords)
             
-            # Must match at least 50% of keywords (or at least 1 if only 1-2 keywords)
-            min_matches = max(1, len(role_keywords) // 2)
-            
-            if match_count < min_matches:
-                print(f"  ⏭️  Skipped (profession mismatch): {internship['title']} (matched {match_count}/{len(role_keywords)} keywords)")
+            if not all_keywords_present:
+                missing_keywords = [kw for kw in role_keywords if kw not in title_words]
+                print(f"  ⏭️  Skipped (missing keywords {missing_keywords}): {internship['title']}")
                 continue
             
             # Filter by location if specified
@@ -372,7 +370,7 @@ def career_agent_task(query, user_profile=None):
                     continue
             
             filtered_internships.append(internship)
-            print(f"  ✅ Matched: {internship['title']} at {internship['company']} (matched {match_count}/{len(role_keywords)} keywords)")
+            print(f"  ✅ Matched: {internship['title']} at {internship['company']} (all {len(role_keywords)} keywords present)")
         
         print(f"📊 After filtering: {len(filtered_internships)} internships")
         
