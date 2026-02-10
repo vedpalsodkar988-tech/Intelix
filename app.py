@@ -246,6 +246,29 @@ def signup():
         email = data.get('email')
         password = data.get('password')
         
+        # Validate email format
+        import re
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, email):
+            return jsonify({'success': False, 'message': 'Invalid email format'})
+        
+        # Check for common fake email domains
+        fake_domains = ['test.com', 'example.com', 'fake.com', 'temp.com', 'dummy.com']
+        email_domain = email.split('@')[1].lower() if '@' in email else ''
+        if email_domain in fake_domains:
+            return jsonify({'success': False, 'message': 'Please use a real email address'})
+        
+        # Validate email domain exists (basic check)
+        common_domains = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'icloud.com', 
+                         'protonmail.com', 'aol.com', 'live.com', 'msn.com', 'rediffmail.com',
+                         'ymail.com', 'zoho.com', 'mail.com']
+        
+        # If not a common domain, check if it at least looks valid
+        if email_domain not in common_domains:
+            # Must have valid TLD
+            if not ('.' in email_domain and len(email_domain.split('.')[-1]) >= 2):
+                return jsonify({'success': False, 'message': 'Please use a real email address from a valid provider'})
+        
         hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
         
         try:
