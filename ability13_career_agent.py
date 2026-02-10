@@ -345,39 +345,54 @@ def career_agent_task(query, user_profile=None):
         # STRICT FILTERING - Filter by profession AND location
         print(f"\n🔍 FILTERING: Looking for '{role}' in '{location}'")
         print(f"📊 Before filtering: {len(all_internships)} internships")
+        print(f"🎯 Required keywords: {role_keywords}")
         
         filtered_internships = []
         role_keywords = [word for word in role.lower().split() if len(word) > 2]  # Ignore short words
         
+        # If only 1 keyword, don't be too strict
+        require_all = len(role_keywords) > 1
+        
         for internship in all_internships:
-            # Filter by profession - title must contain ALL role keywords AS WHOLE WORDS
+            # Filter by profession - title must contain role keywords AS WHOLE WORDS
             title_lower = internship['title'].lower()
             title_words = re.findall(r'\b\w+\b', title_lower)  # Extract whole words only
             
-            # Check if ALL keywords are present in title
-            all_keywords_present = all(keyword in title_words for keyword in role_keywords)
+            print(f"\n  🔍 Checking: {internship['title']}")
+            print(f"     Title words: {title_words}")
             
-            if not all_keywords_present:
-                missing_keywords = [kw for kw in role_keywords if kw not in title_words]
-                print(f"  ⏭️  Skipped (missing keywords {missing_keywords}): {internship['title']}")
-                continue
+            if require_all:
+                # For multi-word searches (web development), require ALL keywords
+                all_keywords_present = all(keyword in title_words for keyword in role_keywords)
+                
+                if not all_keywords_present:
+                    missing_keywords = [kw for kw in role_keywords if kw not in title_words]
+                    print(f"  ⏭️  Skipped (missing keywords {missing_keywords})")
+                    continue
+            else:
+                # For single-word searches (python), require at least that one keyword
+                if role_keywords[0] not in title_words:
+                    print(f"  ⏭️  Skipped (keyword '{role_keywords[0]}' not found)")
+                    continue
             
             # Filter by location if specified
             if location and location.lower() not in ['india', 'anywhere']:
                 internship_location = internship['location'].lower()
                 if location.lower() not in internship_location:
-                    print(f"  ⏭️  Skipped (location mismatch): {internship['title']} - {internship['location']}")
+                    print(f"  ⏭️  Skipped (location mismatch): {internship['location']}")
                     continue
             
             filtered_internships.append(internship)
-            print(f"  ✅ Matched: {internship['title']} at {internship['company']} (all {len(role_keywords)} keywords present)")
+            print(f"  ✅ MATCHED!")
         
-        print(f"📊 After filtering: {len(filtered_internships)} internships")
+        print(f"\n📊 After filtering: {len(filtered_internships)} internships")
         
         if not filtered_internships:
+            # Show what was actually found
+            found_titles = [i['title'] for i in all_internships[:5]]
             result["status"] = "error"
-            result["message"] = f"❌ No '{role}' internships found on Internshala. Try popular roles like: 'web development', 'python', 'digital marketing', 'content writing', 'graphic design'"
-            result["suggestion"] = "Use common internship titles that companies actually post"
+            result["message"] = f"❌ No exact matches for '{role}' internships. Internshala showed: {', '.join(found_titles[:3])}. Try searching for: 'python', 'digital marketing', 'content writing', 'graphic design'"
+            result["suggestion"] = "Use exact internship titles from Internshala"
             print(f"⚠️ No internships matched '{role}'")
             return result
         
