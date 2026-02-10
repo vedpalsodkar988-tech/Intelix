@@ -364,11 +364,18 @@ def shopping_assistant_task(query, user_profile=None):
             print(f"💰 Budget extracted: ₹{budget:,.0f}")
             break
     
-    # Clean the query
+    # Clean the query - PRESERVE product name, only remove budget part
     product_query = query.lower()
     product_query = re.sub(r'\b(find|search|buy|order|get|purchase|best|top)\b', '', product_query).strip()
-    product_query = re.sub(r'under.*|below.*|less than.*|₹?\s*\d+.*', '', product_query, flags=re.IGNORECASE).strip()
-    product_query = re.sub(r'\s+', ' ', product_query)
+    
+    # Remove budget-related phrases ONLY
+    product_query = re.sub(r'under\s+₹?\s*\d+(?:,\d+)*', '', product_query, flags=re.IGNORECASE)
+    product_query = re.sub(r'below\s+₹?\s*\d+(?:,\d+)*', '', product_query, flags=re.IGNORECASE)
+    product_query = re.sub(r'less than\s+₹?\s*\d+(?:,\d+)*', '', product_query, flags=re.IGNORECASE)
+    product_query = re.sub(r'₹?\s*\d+(?:,\d+)*\s+(?:or less|max|maximum)', '', product_query, flags=re.IGNORECASE)
+    
+    # Clean up extra spaces
+    product_query = re.sub(r'\s+', ' ', product_query).strip()
     
     print(f"Cleaned query: {product_query}")
     
