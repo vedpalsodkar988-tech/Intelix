@@ -345,10 +345,12 @@ def career_agent_task(query, user_profile=None):
         # STRICT FILTERING - Filter by profession AND location
         print(f"\n🔍 FILTERING: Looking for '{role}' in '{location}'")
         print(f"📊 Before filtering: {len(all_internships)} internships")
+        
+        # Define role_keywords FIRST
+        role_keywords = [word for word in role.lower().split() if len(word) > 2]  # Ignore short words
         print(f"🎯 Required keywords: {role_keywords}")
         
         filtered_internships = []
-        role_keywords = [word for word in role.lower().split() if len(word) > 2]  # Ignore short words
         
         # If only 1 keyword, don't be too strict
         require_all = len(role_keywords) > 1
