@@ -352,13 +352,29 @@ def career_agent_task(query, user_profile=None):
         
         # Synonym mapping for common terms
         synonyms = {
-            'web': ['web', 'website', 'frontend', 'front-end', 'front', 'fullstack', 'full-stack'],
-            'development': ['development', 'developer', 'dev'],
-            'python': ['python', 'django', 'flask'],
-            'java': ['java', 'spring', 'springboot'],
-            'digital': ['digital', 'online'],
-            'marketing': ['marketing', 'market'],
-            'graphic': ['graphic', 'graphics', 'design'],
+            'web': ['web', 'website', 'frontend', 'front-end', 'front', 'fullstack', 'full-stack', 'full'],
+            'development': ['development', 'developer', 'dev', 'developing'],
+            'python': ['python', 'django', 'flask', 'fastapi'],
+            'java': ['java', 'spring', 'springboot', 'javafx'],
+            'digital': ['digital', 'online', 'internet'],
+            'marketing': ['marketing', 'market', 'promotion', 'advertising'],
+            'graphic': ['graphic', 'graphics', 'visual', 'ui', 'ux'],
+            'design': ['design', 'designer', 'designing'],
+            'content': ['content', 'writing', 'writer', 'copywriting', 'copywriter'],
+            'data': ['data', 'analytics', 'analyst', 'analysis'],
+            'business': ['business', 'sales', 'bd'],
+            'android': ['android', 'mobile', 'app'],
+            'ios': ['ios', 'mobile', 'app', 'swift'],
+            'backend': ['backend', 'back-end', 'server'],
+            'frontend': ['frontend', 'front-end', 'ui'],
+            'machine': ['machine', 'ml', 'ai', 'artificial'],
+            'learning': ['learning', 'ml', 'ai'],
+            'social': ['social', 'smm', 'socialmedia'],
+            'media': ['media', 'content', 'smm'],
+            'video': ['video', 'editing', 'editor'],
+            'seo': ['seo', 'search', 'optimization'],
+            'hr': ['hr', 'human', 'resources', 'recruitment'],
+            'finance': ['finance', 'financial', 'accounting'],
         }
         
         filtered_internships = []
@@ -446,4 +462,3 @@ def career_agent_task(query, user_profile=None):
         import traceback
         traceback.print_exc()
         return result
-
