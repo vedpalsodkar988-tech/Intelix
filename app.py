@@ -316,12 +316,21 @@ def projects():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     
+    from datetime import timedelta
+    
     conn = get_db_connection()
     c = conn.cursor()
     c.execute('SELECT * FROM tasks WHERE user_id = %s ORDER BY created_at DESC', 
               (session['user_id'],))
     tasks = c.fetchall()
     conn.close()
+    
+    # Convert UTC to IST (UTC +5:30)
+    for task in tasks:
+        if task['created_at']:
+            task['created_at'] = task['created_at'] + timedelta(hours=5, minutes=30)
+        if task.get('completed_at'):
+            task['completed_at'] = task['completed_at'] + timedelta(hours=5, minutes=30)
     
     return render_template('chat_history.html', tasks=tasks)
 
