@@ -350,18 +350,23 @@ def career_agent_task(query, user_profile=None):
         role_keywords = [word for word in role.lower().split() if len(word) > 2]  # Ignore short words
         print(f"🎯 Required keywords: {role_keywords}")
         
-        # Synonym mapping for common terms
+        # Synonym mapping for common terms - includes variations as keys too!
         synonyms = {
             'web': ['web', 'website', 'frontend', 'front-end', 'front', 'fullstack', 'full-stack', 'full'],
             'development': ['development', 'developer', 'dev', 'developing'],
+            'developer': ['development', 'developer', 'dev', 'developing'],  # Same as development!
             'python': ['python', 'django', 'flask', 'fastapi'],
             'java': ['java', 'spring', 'springboot', 'javafx'],
             'digital': ['digital', 'online', 'internet'],
             'marketing': ['marketing', 'market', 'promotion', 'advertising'],
             'graphic': ['graphic', 'graphics', 'visual', 'ui', 'ux'],
             'design': ['design', 'designer', 'designing'],
+            'designer': ['design', 'designer', 'designing'],  # Same as design!
             'content': ['content', 'writing', 'writer', 'copywriting', 'copywriter'],
+            'writing': ['content', 'writing', 'writer', 'copywriting', 'copywriter'],  # Same as content!
+            'writer': ['content', 'writing', 'writer', 'copywriting', 'copywriter'],  # Same as content!
             'data': ['data', 'analytics', 'analyst', 'analysis'],
+            'analyst': ['data', 'analytics', 'analyst', 'analysis'],  # Same as data!
             'business': ['business', 'sales', 'bd'],
             'android': ['android', 'mobile', 'app'],
             'ios': ['ios', 'mobile', 'app', 'swift'],
@@ -372,6 +377,8 @@ def career_agent_task(query, user_profile=None):
             'social': ['social', 'smm', 'socialmedia'],
             'media': ['media', 'content', 'smm'],
             'video': ['video', 'editing', 'editor'],
+            'editing': ['video', 'editing', 'editor'],  # Same as video!
+            'editor': ['video', 'editing', 'editor'],  # Same as video!
             'seo': ['seo', 'search', 'optimization'],
             'hr': ['hr', 'human', 'resources', 'recruitment'],
             'finance': ['finance', 'financial', 'accounting'],
