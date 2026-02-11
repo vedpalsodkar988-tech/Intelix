@@ -359,7 +359,7 @@ def career_agent_task(query, user_profile=None):
             'developer': ['development', 'developer', 'dev', 'developing'],  # Same as development!
             'python': ['python', 'django', 'flask', 'fastapi'],
             'java': ['java', 'spring', 'springboot', 'javafx'],
-            'digital': ['digital', 'online', 'internet'],
+            'digital': ['digital', 'online', 'internet', 'social', 'media'],
             'marketing': ['marketing', 'market', 'promotion', 'advertising'],
             'graphic': ['graphic', 'graphics', 'visual', 'ui', 'ux'],
             'design': ['design', 'designer', 'designing'],
