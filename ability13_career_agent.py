@@ -34,12 +34,14 @@ def extract_internship_query(query):
     """Extract internship role from query"""
     query_lower = query.lower()
     
-    # Remove command words
+    # Remove command words using word boundaries to avoid removing letters from actual words
     role = query_lower
-    remove_words = ['find', 'search', 'get', 'looking for', 'internship', 'internships', 'for', 'in', 'need', 'want']
+    remove_words = ['find', 'search', 'get', 'looking for', 'internship', 'internships', 'need', 'want']
     for word in remove_words:
-        role = role.replace(word, ' ')
+        # Use word boundary regex to only remove whole words, not letters inside words
+        role = re.sub(r'\b' + re.escape(word) + r'\b', ' ', role)
     
+    # Clean up extra spaces
     role = ' '.join(role.split()).strip()
     
     return role
