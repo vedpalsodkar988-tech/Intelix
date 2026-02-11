@@ -492,7 +492,7 @@ def run_task():
         c.execute('''UPDATE tasks 
                      SET status = %s, result = %s, completed_at = CURRENT_TIMESTAMP 
                      WHERE id = %s''',
-                  ('completed', str(result), task_id))
+                  ('completed', json.dumps(result), task_id))
         conn.commit()
         conn.close()
         
@@ -505,7 +505,7 @@ def run_task():
         conn = get_db_connection()
         c = conn.cursor()
         c.execute('UPDATE tasks SET status = %s, result = %s WHERE id = %s',
-                  ('failed', str(e), task_id))
+                  ('failed', json.dumps({'error': str(e)}), task_id))
         conn.commit()
         conn.close()
         
