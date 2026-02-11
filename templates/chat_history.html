@@ -214,9 +214,9 @@
                         </div>
                         
                         <div class="task-meta">
-                            <span>🕐 Created: {{ task.created_at.strftime('%Y-%m-%d %H:%M') if task.created_at else (task['created_at'].strftime('%Y-%m-%d %H:%M') if task['created_at'] else 'N/A') }}</span>
+                            <span>🕐 Created: {{ task.created_at.strftime('%Y-%m-%d %H:%M') if task.created_at else (task['created_at'].strftime('%Y-%m-%d %H:%M') if task['created_at'] else 'N/A') }} IST</span>
                             {% if task.completed_at or task['completed_at'] %}
-                            <span>✓ Completed: {{ task.completed_at.strftime('%Y-%m-%d %H:%M') if task.completed_at else (task['completed_at'].strftime('%Y-%m-%d %H:%M') if task['completed_at'] else '') }}</span>
+                            <span>✓ Completed: {{ task.completed_at.strftime('%Y-%m-%d %H:%M') if task.completed_at else (task['completed_at'].strftime('%Y-%m-%d %H:%M') if task['completed_at'] else '') }} IST</span>
                             {% endif %}
                         </div>
 
@@ -232,8 +232,9 @@
                             // Parse and display results
                             (function() {
                                 try {
-                                    // Get the raw result string
-                                    const rawResult = {{ (task.result or task['result']) | tojson }};
+                                    // Result is already JSON string in database, so parse it
+                                    const resultString = `{{ (task.result or task['result']) | safe }}`;
+                                    const rawResult = JSON.parse(resultString);
                                     
                                     let html = '';
                                     
