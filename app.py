@@ -533,6 +533,62 @@ def run_task():
         
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/change-password', methods=['POST'])
+def change_password():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Not logged in'})
+    
+    data = request.json
+    current_password = data.get('current_password')
+    new_password = data.get('new_password')
+    
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute('SELECT password FROM users WHERE id = %s', (session['user_id'],))
+    user = c.fetchone()
+    
+    if not user or not check_password_hash(user['password'], current_password):
+        conn.close()
+        return jsonify({'success': False, 'message': 'Current password is incorrect'})
+    
+    hashed_password = generate_password_hash(new_password, method='pbkdf2:sha256')
+    c.execute('UPDATE users SET password = %s WHERE id = %s', (hashed_password, session['user_id']))
+    conn.commit()
+    conn.close()
+    
+    print(f"✅ Password changed for user {session['user_id']}")
+    return jsonify({'success': True, 'message': 'Password changed successfully'})
+
+@app.route('/delete-account', methods=['POST'])
+def delete_account():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Not logged in'})
+    
+    user_id = session['user_id']
+    username = session.get('username')
+    
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    # Delete user's tasks
+    c.execute('DELETE FROM tasks WHERE user_id = %s', (user_id,))
+    
+    # Delete user's profile
+    c.execute('DELETE FROM profiles WHERE user_id = %s', (user_id,))
+    
+    # Delete user account
+    c.execute('DELETE FROM users WHERE id = %s', (user_id,))
+    
+    conn.commit()
+    conn.close()
+    
+    print(f"🗑️ Account deleted: {username} (ID: {user_id})")
+    
+    # Clear session
+    session.clear()
+    
+    return jsonify({'success': True, 'message': 'Account deleted successfully'})
+
 @app.route('/logout')
 def logout():
     session.clear()
