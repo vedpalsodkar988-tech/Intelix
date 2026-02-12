@@ -446,10 +446,21 @@ def run_task():
     socketio.emit('task_started', {'task_id': task_id, 'description': task_description})
     
     try:
-        plan = think_and_plan(task_description)
-        ability_chosen = plan.get('ability')
+        # SHOPPING KEYWORD OVERRIDE - bypass brain for product searches
+        shopping_keywords = ['laptop', 'phone', 'earbuds', 'headphones', 'speaker', 'watch', 'tablet', 
+                           'monitor', 'keyboard', 'mouse', 'iphone', 'samsung', 'sony', 'jbl',
+                           'shoes', 'clothes', 'buy', 'price', 'under', 'budget', 'deal', 'best price']
         
-        socketio.emit('task_update', {'message': f'AI Brain chose: {ability_chosen}'})
+        task_lower = task_description.lower()
+        is_shopping = any(keyword in task_lower for keyword in shopping_keywords)
+        
+        if is_shopping:
+            ability_chosen = 'shopping'
+            socketio.emit('task_update', {'message': 'AI Brain chose: shopping (detected product keywords)'})
+        else:
+            plan = think_and_plan(task_description)
+            ability_chosen = plan.get('ability')
+            socketio.emit('task_update', {'message': f'AI Brain chose: {ability_chosen}'})
         
         result = None
         
