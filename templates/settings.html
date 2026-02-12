@@ -3,121 +3,199 @@
 <head>
     <meta charset="UTF-8">
     <!-- Google Analytics -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-X7ZYY773JC"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-X7ZYY773JC');
-</script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-X7ZYY773JC"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-X7ZYY773JC');
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Settings - Intelix</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <style>
         .settings-container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
             padding: 40px 50px 100px;
         }
         .settings-header {
             text-align: center;
-            margin-bottom: 40px;
+            margin-bottom: 50px;
         }
         .settings-header h1 {
-            font-size: 42px;
+            font-size: 48px;
             background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 10px;
         }
+        .settings-header p {
+            color: #8b92b0;
+            font-size: 16px;
+        }
         .settings-section {
             background: rgba(26, 31, 58, 0.8);
             border: 2px solid rgba(59, 130, 246, 0.3);
-            border-radius: 15px;
-            padding: 30px;
-            margin-bottom: 25px;
+            border-radius: 20px;
+            padding: 35px;
+            margin-bottom: 30px;
         }
         .section-title {
-            color: #3b82f6;
-            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 22px;
             font-weight: 700;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid rgba(59, 130, 246, 0.3);
+            color: #60a5fa;
+            margin-bottom: 25px;
+        }
+        .section-title .icon {
+            font-size: 28px;
         }
         .setting-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px 0;
-            border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(59, 130, 246, 0.2);
         }
         .setting-item:last-child {
             border-bottom: none;
         }
-        .setting-label {
-            color: #e2e8f0;
+        .setting-info h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 5px;
+        }
+        .setting-info p {
+            font-size: 14px;
+            color: #8b92b0;
+        }
+        .setting-value {
+            color: #8b92b0;
             font-size: 15px;
         }
-        .setting-description {
-            color: #8b92b0;
-            font-size: 13px;
-            margin-top: 5px;
-        }
-        .toggle-switch {
-            position: relative;
-            width: 50px;
-            height: 26px;
-            background: #475569;
-            border-radius: 13px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-        .toggle-switch.active {
-            background: #3b82f6;
-        }
-        .toggle-slider {
-            position: absolute;
-            top: 3px;
-            left: 3px;
-            width: 20px;
-            height: 20px;
-            background: white;
-            border-radius: 50%;
-            transition: transform 0.3s;
-        }
-        .toggle-switch.active .toggle-slider {
-            transform: translateX(24px);
-        }
-        .danger-button {
-            padding: 12px 24px;
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            border: none;
-            border-radius: 10px;
+        .btn-change {
+            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
             color: white;
-            font-size: 14px;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 10px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
         }
-        .danger-button:hover {
+        .btn-change:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4);
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
         }
-        .info-box {
-            background: rgba(59, 130, 246, 0.1);
-            border: 1px solid rgba(59, 130, 246, 0.3);
+        .btn-upgrade {
+            display: inline-block;
+            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+            color: white;
+            padding: 14px 40px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 16px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+        .btn-upgrade:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.5);
+        }
+        .plan-features {
+            list-style: none;
+            padding: 0;
+            margin: 20px 0;
+        }
+        .plan-features li {
+            padding: 8px 0;
+            color: #8b92b0;
+            font-size: 15px;
+        }
+        .plan-features li:before {
+            content: "• ";
+            color: #60a5fa;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        .premium-features {
+            margin-top: 25px;
+            padding-top: 25px;
+            border-top: 1px solid rgba(59, 130, 246, 0.2);
+        }
+        .premium-features h4 {
+            color: #60a5fa;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+        .btn-delete {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
             border-radius: 10px;
-            padding: 15px;
-            color: #94a3b8;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .btn-delete:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
+        }
+        .delete-warning {
+            color: #8b92b0;
             font-size: 14px;
-            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        
+        /* Theme Toggle Switch */
+        .theme-toggle {
+            position: relative;
+            width: 60px;
+            height: 30px;
+        }
+        .theme-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(59, 130, 246, 0.3);
+            border-radius: 30px;
+            transition: 0.3s;
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background: white;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+        .theme-toggle input:checked + .toggle-slider {
+            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+        }
+        .theme-toggle input:checked + .toggle-slider:before {
+            transform: translateX(30px);
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h2>Intelix</h2>
@@ -125,125 +203,117 @@
             <nav class="sidebar-nav">
                 <a href="/home" class="nav-item">
                     <span class="nav-icon">🏠</span>
-                    <span>Home</span>
+                    Home
                 </a>
                 <a href="/abilities" class="nav-item">
                     <span class="nav-icon">⚡</span>
-                    <span>Abilities</span>
+                    Abilities
                 </a>
                 <a href="/projects" class="nav-item">
                     <span class="nav-icon">📁</span>
-                    <span>Your Projects</span>
+                    Your Projects
                 </a>
             </nav>
             <div class="sidebar-footer">
                 <a href="/profile" class="nav-item">
                     <span class="nav-icon">👤</span>
-                    <span>Profile</span>
+                    Profile
                 </a>
                 <a href="/settings" class="nav-item active">
                     <span class="nav-icon">⚙️</span>
-                    <span>Settings</span>
+                    Settings
                 </a>
             </div>
         </aside>
 
-        <!-- Main Content -->
         <main class="main-content">
             <div class="settings-container">
                 <div class="settings-header">
                     <h1>Settings</h1>
-                    <p style="color: #8b92b0;">Manage your account and preferences</p>
+                    <p>Manage your account and preferences</p>
                 </div>
 
-                <!-- Account Settings -->
+                <!-- Account Section -->
                 <div class="settings-section">
-                    <div class="section-title">👤 Account</div>
-                    
-                    <div class="setting-item">
-                        <div>
-                            <div class="setting-label">Username</div>
-                            <div class="setting-description">{{ username }}</div>
-                        </div>
+                    <div class="section-title">
+                        <span class="icon">👤</span>
+                        <span>Account</span>
                     </div>
                     
                     <div class="setting-item">
-                        <div>
-                            <div class="setting-label">Change Password</div>
-                            <div class="setting-description">Update your account password</div>
+                        <div class="setting-info">
+                            <h3>Username</h3>
                         </div>
-                        <button onclick="alert('Password change feature coming soon!')" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">Change</button>
+                        <div class="setting-value">{{ session.get('username', 'User') }}</div>
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <h3>Change Password</h3>
+                            <p>Update your account password</p>
+                        </div>
+                        <button class="btn-change" onclick="alert('Password change feature coming soon!')">Change</button>
                     </div>
                 </div>
 
-                <!-- Preferences -->
+                <!-- Appearance Section -->
                 <div class="settings-section">
-                    <div class="section-title">🔔 Notifications</div>
-                    
-                    <div class="setting-item">
-                        <div>
-                            <div class="setting-label">Email Notifications</div>
-                            <div class="setting-description">Receive updates about your tasks</div>
-                        </div>
-                        <div class="toggle-switch active" onclick="toggleSwitch(this)">
-                            <div class="toggle-slider"></div>
-                        </div>
+                    <div class="section-title">
+                        <span class="icon">🎨</span>
+                        <span>Appearance</span>
                     </div>
                     
                     <div class="setting-item">
-                        <div>
-                            <div class="setting-label">Job Search Alerts</div>
-                            <div class="setting-description">Get notified when new matching jobs are found</div>
+                        <div class="setting-info">
+                            <h3>Dark Mode</h3>
+                            <p>Toggle between light and dark theme</p>
                         </div>
-                        <div class="toggle-switch active" onclick="toggleSwitch(this)">
-                            <div class="toggle-slider"></div>
-                        </div>
-                    </div>
-                    
-                    <div class="setting-item">
-                        <div>
-                            <div class="setting-label">Price Drop Alerts</div>
-                            <div class="setting-description">Get notified when prices drop on tracked items</div>
-                        </div>
-                        <div class="toggle-switch" onclick="toggleSwitch(this)">
-                            <div class="toggle-slider"></div>
-                        </div>
+                        <label class="theme-toggle">
+                            <input type="checkbox" id="themeToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
                     </div>
                 </div>
 
-                <!-- Subscription -->
+                <!-- Subscription Section -->
                 <div class="settings-section">
-                    <div class="section-title">💎 Subscription</div>
-                    
-                    <div class="info-box">
-                        <strong>Current Plan: FREE</strong><br>
-                        • 3 job searches per day<br>
-                        • Basic abilities access<br>
-                        • Manual execution<br><br>
-                        <strong>Upgrade to Premium for:</strong><br>
-                        • Unlimited searches<br>
-                        • Auto-apply to jobs<br>
-                        • Priority support<br>
-                        • Advanced features
+                    <div class="section-title">
+                        <span class="icon">💎</span>
+                        <span>Subscription</span>
                     </div>
                     
-                    <div style="text-align: center; margin-top: 20px;">
-                        <button onclick="alert('Premium subscription coming soon!')" style="padding: 14px 32px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer;">
-                            Upgrade to Premium
-                        </button>
+                    <div class="setting-item" style="border-bottom: none; flex-direction: column; align-items: flex-start;">
+                        <div style="width: 100%;">
+                            <h3 style="font-size: 18px; margin-bottom: 15px;">Current Plan: FREE</h3>
+                            <ul class="plan-features">
+                                <li>10 tasks per month</li>
+                                <li>Basic abilities access</li>
+                                <li>Manual execution</li>
+                            </ul>
+                            
+                            <div class="premium-features">
+                                <h4>Upgrade to Premium for:</h4>
+                                <ul class="plan-features">
+                                    <li>Unlimited searches</li>
+                                    <li>Auto-apply to jobs</li>
+                                    <li>Priority support</li>
+                                    <li>Advanced features</li>
+                                </ul>
+                            </div>
+                            
+                            <a href="#" class="btn-upgrade" onclick="alert('Premium plans coming soon! Stay tuned 🚀'); return false;">Upgrade to Premium</a>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Danger Zone -->
+                <!-- Delete Account Section (no "Danger Zone" label) -->
                 <div class="settings-section" style="border-color: rgba(239, 68, 68, 0.3);">
-                    <div class="section-title" style="color: #ef4444;">⚠️ Danger Zone</div>
-                    
-                    <div class="setting-item">
-                        <div>
-                            <div class="setting-label">Delete Account</div>
-                            <div class="setting-description">Permanently delete your account and all data</div>
+                    <div class="setting-item" style="border-bottom: none; flex-direction: column; align-items: flex-start;">
+                        <div style="width: 100%;">
+                            <h3 style="font-size: 18px; color: #ef4444; margin-bottom: 10px;">Delete Account</h3>
+                            <p class="delete-warning">Permanently delete your account and all data</p>
+                            <button class="btn-delete" onclick="confirmDelete()">Delete Account</button>
                         </div>
-                        <button class="danger-button" onclick="confirmDelete()">Delete Account</button>
                     </div>
                 </div>
 
@@ -252,19 +322,37 @@
     </div>
 
     <script>
-        function toggleSwitch(element) {
-            element.classList.toggle('active');
+        // Theme Toggle
+        const themeToggle = document.getElementById('themeToggle');
+        const body = document.body;
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        if (savedTheme === 'light') {
+            body.classList.add('light-mode');
+            themeToggle.checked = false;
         }
 
+        // Toggle theme
+        themeToggle.addEventListener('change', function() {
+            if (this.checked) {
+                body.classList.remove('light-mode');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                body.classList.add('light-mode');
+                localStorage.setItem('theme', 'light');
+            }
+        });
+
+        // Delete account confirmation
         function confirmDelete() {
-            if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-                if (confirm('This will permanently delete all your data. Are you absolutely sure?')) {
-                    // Add delete account logic here
-                    alert('Account deletion feature coming soon. Contact support@intelix.com to delete your account.');
+            if (confirm('⚠️ Are you absolutely sure? This action cannot be undone!')) {
+                if (confirm('⚠️ Last warning! All your data will be permanently deleted. Continue?')) {
+                    // TODO: Add delete account endpoint
+                    alert('Account deletion feature coming soon!');
                 }
             }
         }
     </script>
 </body>
-
 </html>
