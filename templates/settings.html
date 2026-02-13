@@ -91,48 +91,6 @@
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
         }
-        .btn-upgrade {
-            display: inline-block;
-            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
-            color: white;
-            padding: 14px 40px;
-            border-radius: 12px;
-            font-weight: 700;
-            font-size: 16px;
-            text-decoration: none;
-            transition: all 0.3s ease;
-            margin-top: 20px;
-        }
-        .btn-upgrade:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.5);
-        }
-        .plan-features {
-            list-style: none;
-            padding: 0;
-            margin: 20px 0;
-        }
-        .plan-features li {
-            padding: 8px 0;
-            color: #8b92b0;
-            font-size: 15px;
-        }
-        .plan-features li:before {
-            content: "• ";
-            color: #60a5fa;
-            font-weight: bold;
-            margin-right: 8px;
-        }
-        .premium-features {
-            margin-top: 25px;
-            padding-top: 25px;
-            border-top: 1px solid rgba(59, 130, 246, 0.2);
-        }
-        .premium-features h4 {
-            color: #60a5fa;
-            font-size: 16px;
-            margin-bottom: 15px;
-        }
         .btn-delete {
             background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
             color: white;
@@ -147,50 +105,58 @@
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
         }
-        .delete-warning {
+        .btn-clear {
+            background: rgba(251, 146, 60, 0.2);
+            color: #fb923c;
+            border: 2px solid #fb923c;
+            padding: 10px 24px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .btn-clear:hover {
+            background: rgba(251, 146, 60, 0.3);
+            transform: translateY(-2px);
+        }
+        .usage-stats {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        .stat-card {
+            flex: 1;
+            min-width: 200px;
+            background: rgba(10, 14, 39, 0.5);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .stat-number {
+            font-size: 32px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+        }
+        .stat-label {
             color: #8b92b0;
             font-size: 14px;
-            margin-bottom: 15px;
         }
-        
-        /* Theme Toggle Switch */
-        .theme-toggle {
-            position: relative;
-            width: 60px;
-            height: 30px;
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(59, 130, 246, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 15px;
         }
-        .theme-toggle input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        .toggle-slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(59, 130, 246, 0.3);
-            border-radius: 30px;
-            transition: 0.3s;
-        }
-        .toggle-slider:before {
-            position: absolute;
-            content: "";
-            height: 22px;
-            width: 22px;
-            left: 4px;
-            bottom: 4px;
-            background: white;
-            border-radius: 50%;
-            transition: 0.3s;
-        }
-        .theme-toggle input:checked + .toggle-slider {
+        .progress-fill {
+            height: 100%;
             background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
-        }
-        .theme-toggle input:checked + .toggle-slider:before {
-            transform: translateX(30px);
+            border-radius: 10px;
+            transition: width 0.3s ease;
         }
     </style>
 </head>
@@ -252,68 +218,58 @@
                             <h3>Change Password</h3>
                             <p>Update your account password</p>
                         </div>
-                        <button class="btn-change" onclick="alert('Password change feature coming soon!')">Change</button>
+                        <button class="btn-change" onclick="changePassword()">Change</button>
                     </div>
                 </div>
 
-                <!-- Appearance Section -->
+                <!-- Usage Stats Section -->
                 <div class="settings-section">
                     <div class="section-title">
-                        <span class="icon">🎨</span>
-                        <span>Appearance</span>
+                        <span class="icon">📊</span>
+                        <span>Usage This Month</span>
+                    </div>
+                    
+                    <div class="usage-stats">
+                        <div class="stat-card">
+                            <div class="stat-number" id="tasksUsed">-</div>
+                            <div class="stat-label">Tasks Used</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="tasksRemaining">-</div>
+                            <div class="stat-label">Tasks Remaining</div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="usageProgress" style="width: 0%"></div>
+                    </div>
+                    
+                    <p style="color: #8b92b0; font-size: 13px; margin-top: 15px;">
+                        Resets on: <span id="resetDate">-</span>
+                    </p>
+                </div>
+
+                <!-- Data Management Section -->
+                <div class="settings-section">
+                    <div class="section-title">
+                        <span class="icon">🗑️</span>
+                        <span>Data Management</span>
                     </div>
                     
                     <div class="setting-item">
                         <div class="setting-info">
-                            <h3>Dark Mode</h3>
-                            <p>Toggle between light and dark theme</p>
+                            <h3>Clear Task History</h3>
+                            <p>Remove all your completed tasks</p>
                         </div>
-                        <label class="theme-toggle">
-                            <input type="checkbox" id="themeToggle" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
+                        <button class="btn-clear" onclick="clearHistory()">Clear History</button>
                     </div>
-                </div>
 
-                <!-- Subscription Section -->
-                <div class="settings-section">
-                    <div class="section-title">
-                        <span class="icon">💎</span>
-                        <span>Subscription</span>
-                    </div>
-                    
-                    <div class="setting-item" style="border-bottom: none; flex-direction: column; align-items: flex-start;">
-                        <div style="width: 100%;">
-                            <h3 style="font-size: 18px; margin-bottom: 15px;">Current Plan: FREE</h3>
-                            <ul class="plan-features">
-                                <li>10 tasks per month</li>
-                                <li>Basic abilities access</li>
-                                <li>Manual execution</li>
-                            </ul>
-                            
-                            <div class="premium-features">
-                                <h4>Upgrade to Premium for:</h4>
-                                <ul class="plan-features">
-                                    <li>Unlimited searches</li>
-                                    <li>Auto-apply to jobs</li>
-                                    <li>Priority support</li>
-                                    <li>Advanced features</li>
-                                </ul>
-                            </div>
-                            
-                            <a href="#" class="btn-upgrade" onclick="alert('Premium plans coming soon! Stay tuned 🚀'); return false;">Upgrade to Premium</a>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <h3>Delete Account</h3>
+                            <p>Permanently delete your account and all data</p>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Delete Account Section (no "Danger Zone" label) -->
-                <div class="settings-section" style="border-color: rgba(239, 68, 68, 0.3);">
-                    <div class="setting-item" style="border-bottom: none; flex-direction: column; align-items: flex-start;">
-                        <div style="width: 100%;">
-                            <h3 style="font-size: 18px; color: #ef4444; margin-bottom: 10px;">Delete Account</h3>
-                            <p class="delete-warning">Permanently delete your account and all data</p>
-                            <button class="btn-delete" onclick="confirmDelete()">Delete Account</button>
-                        </div>
+                        <button class="btn-delete" onclick="confirmDelete()">Delete Account</button>
                     </div>
                 </div>
 
@@ -322,34 +278,111 @@
     </div>
 
     <script>
-        // Theme Toggle
-        const themeToggle = document.getElementById('themeToggle');
-        const body = document.body;
-
-        // Load saved theme
-        const savedTheme = localStorage.getItem('theme') || 'dark';
-        if (savedTheme === 'light') {
-            body.classList.add('light-mode');
-            themeToggle.checked = false;
-        }
-
-        // Toggle theme
-        themeToggle.addEventListener('change', function() {
-            if (this.checked) {
-                body.classList.remove('light-mode');
-                localStorage.setItem('theme', 'dark');
-            } else {
-                body.classList.add('light-mode');
-                localStorage.setItem('theme', 'light');
+        // Load usage stats on page load
+        window.addEventListener('DOMContentLoaded', async function() {
+            try {
+                const response = await fetch('/check-limits');
+                const data = await response.json();
+                
+                const used = data.used || 0;
+                const total = data.total || 10;
+                const remaining = total - used;
+                const percentage = (used / total) * 100;
+                
+                document.getElementById('tasksUsed').textContent = used;
+                document.getElementById('tasksRemaining').textContent = remaining;
+                document.getElementById('usageProgress').style.width = percentage + '%';
+                
+                // Calculate next month reset date
+                const now = new Date();
+                const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+                const options = { year: 'numeric', month: 'long', day: 'numeric' };
+                document.getElementById('resetDate').textContent = nextMonth.toLocaleDateString('en-US', options);
+            } catch (error) {
+                console.error('Error loading usage stats:', error);
             }
         });
 
-        // Delete account confirmation
+        // Change Password
+        function changePassword() {
+            const currentPassword = prompt('Enter your current password:');
+            if (!currentPassword) return;
+
+            const newPassword = prompt('Enter your new password (min 6 characters):');
+            if (!newPassword || newPassword.length < 6) {
+                alert('❌ Password must be at least 6 characters long');
+                return;
+            }
+
+            const confirmPassword = prompt('Confirm your new password:');
+            if (newPassword !== confirmPassword) {
+                alert('❌ Passwords do not match!');
+                return;
+            }
+
+            fetch('/change-password', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    current_password: currentPassword,
+                    new_password: newPassword
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ Password changed successfully!');
+                } else {
+                    alert('❌ ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('❌ Error changing password');
+            });
+        }
+
+        // Clear Task History
+        function clearHistory() {
+            if (confirm('⚠️ Are you sure you want to clear all your task history? This cannot be undone.')) {
+                fetch('/clear-history', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ Task history cleared successfully!');
+                        window.location.reload();
+                    } else {
+                        alert('❌ ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('❌ Error clearing history');
+                });
+            }
+        }
+
+        // Delete Account
         function confirmDelete() {
-            if (confirm('⚠️ Are you absolutely sure? This action cannot be undone!')) {
-                if (confirm('⚠️ Last warning! All your data will be permanently deleted. Continue?')) {
-                    // TODO: Add delete account endpoint
-                    alert('Account deletion feature coming soon!');
+            if (confirm('⚠️ Are you absolutely sure? This will permanently delete your account and ALL data!')) {
+                if (confirm('⚠️ FINAL WARNING! This action CANNOT be undone. Delete account?')) {
+                    fetch('/delete-account', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'}
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('✅ Account deleted successfully');
+                            window.location.href = '/';
+                        } else {
+                            alert('❌ ' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        alert('❌ Error deleting account');
+                    });
                 }
             }
         }
