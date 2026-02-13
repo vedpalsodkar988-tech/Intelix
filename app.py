@@ -589,6 +589,27 @@ def delete_account():
     
     return jsonify({'success': True, 'message': 'Account deleted successfully'})
 
+@app.route('/clear-history', methods=['POST'])
+def clear_history():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Not logged in'})
+    
+    user_id = session['user_id']
+    
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    # Delete all completed tasks for this user
+    c.execute('DELETE FROM tasks WHERE user_id = %s AND status = %s', (user_id, 'completed'))
+    deleted_count = c.rowcount
+    
+    conn.commit()
+    conn.close()
+    
+    print(f"🗑️ Cleared {deleted_count} tasks for user {user_id}")
+    
+    return jsonify({'success': True, 'message': f'{deleted_count} tasks cleared successfully'})
+
 @app.route('/logout')
 def logout():
     session.clear()
