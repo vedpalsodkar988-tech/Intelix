@@ -4,7 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 from urllib.parse import urlparse
 
@@ -24,6 +24,11 @@ from ability_shopping import shopping_assistant_task
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-this-in-production')
+
+# PERMANENT SESSIONS - Stay logged in forever!
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=365)  # 1 year
+app.config['SESSION_PERMANENT'] = True
+
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 # ============================================
@@ -224,9 +229,10 @@ def login():
             print(f"✅ User found, checking password...")
             
             if check_password_hash(user['password'], password):
+                session.permanent = True  # Make session permanent (stays for 1 year)
                 session['user_id'] = user['id']
                 session['username'] = user['username']
-                print(f"✅ Login successful for {username}")
+                print(f"✅ Login successful for {username} (session will persist)")
                 return jsonify({'success': True, 'message': 'Login successful'})
             else:
                 print(f"❌ Invalid password for {username}")
@@ -283,9 +289,10 @@ def signup():
             conn.close()
             
             if user:
+                session.permanent = True  # Make session permanent (stays for 1 year)
                 session['user_id'] = user['id']
                 session['username'] = user['username']
-                print(f"✅ User {username} created and logged in successfully!")
+                print(f"✅ User {username} created and logged in successfully! (permanent session)")
                 return jsonify({'success': True, 'message': 'Account created successfully'})
             else:
                 return jsonify({'success': False, 'message': 'Account created but login failed'})
