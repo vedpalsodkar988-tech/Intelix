@@ -28,6 +28,9 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-
 # PERMANENT SESSIONS - Stay logged in forever!
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=365)  # 1 year
 app.config['SESSION_PERMANENT'] = True
+app.config['SESSION_COOKIE_SECURE'] = False  # Set to True if using HTTPS only
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
@@ -175,14 +178,6 @@ ABILITIES = [
     },
     {
         "id": 3,
-        "name": "AI Job Finder",
-        "description": "Search jobs across multiple platforms based on your profile",
-        "functions": ["Search multiple job portals", "Match based on profile", "Filter by salary & experience"],
-        "rating": 5,
-        "status": "coming_soon"
-    },
-    {
-        "id": 4,
         "name": "Auto Email Reply",
         "description": "Smart automated email responses",
         "functions": ["Read emails", "Generate replies", "Send responses"],
@@ -190,7 +185,7 @@ ABILITIES = [
         "status": "coming_soon"
     },
     {
-        "id": 5,
+        "id": 4,
         "name": "AI Auto-Job Applier",
         "description": "Select jobs and auto-apply to multiple positions instantly",
         "functions": ["Select jobs to apply", "Auto-fill applications", "Submit to multiple portals"],
